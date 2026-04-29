@@ -44,7 +44,7 @@ Declared values (must be multiples of 4):
 | 2xl | 48px | Major section breaks |
 | 3xl | 64px | Page-level top/bottom padding |
 
-Exceptions: Sidebar nav items use 44px minimum touch/click target height (accessibility) even though 44 is not a multiple of 8. Achieved via `min-h-[44px]` with `py-[10px]` inner padding.
+Exceptions: Sidebar nav items use 44px minimum touch/click target height (accessibility) even though 44 is not a multiple of 8. Achieved via `min-h-[44px]` with `py-[10px]` inner padding. WCAG 2.5.5 justification — explicit pixel value preferred over line-height arithmetic.
 
 *Sources: 8-point grid default; touch target exception follows WCAG 2.5.5*
 
@@ -57,12 +57,12 @@ All sizing in `rem` equivalent to pixel values below (base 16px). Monospace is t
 | Role | Family | Size | Weight | Line Height | Notes |
 |------|--------|------|--------|-------------|-------|
 | Body | Iosevka | 14px (0.875rem) | 400 regular | 1.6 | Primary reading size in lists, metadata, slot data |
-| Label | Iosevka | 12px (0.75rem) | 500 medium | 1.4 | Nav labels, sidebar items, table headers, badges |
+| Label | Iosevka | 12px (0.75rem) | 600 semibold | 1.4 | Nav labels, sidebar items, table headers, badges |
 | Heading | Iosevka | 18px (1.125rem) | 600 semibold | 1.2 | Section headings within content area |
 | Display | Iosevka | 24px (1.5rem) | 600 semibold | 1.1 | App title bar, major empty/disconnected state headings |
 | Prose | Inter | 14px (0.875rem) | 400 regular | 1.6 | Confirmation dialogs, longer descriptive copy only |
 
-**Weight contract:** Regular (400) and semibold (600) only. Medium (500) used only for label role. No other weights.
+**Weight contract:** Regular (400) and semibold (600) only. Two weights maximum — no exceptions.
 
 *Sources: CONTEXT.md D-08 (monospace-forward); Claude's Discretion (Iosevka selection, exact sizing)*
 
@@ -170,11 +170,11 @@ Appears as a non-fullscreen dialog (shadcn `dialog`, not `alert-dialog`) — use
              /Volumes/OT-CARD
              
              Would you like to use this device?
-[Buttons]    [Use this device]  [Ignore]
+[Buttons]    [Use this device]  [Not Now]
 ```
 
 - "Use this device" → accent button → auto-navigates to Projects view
-- "Ignore" → ghost button → dialog closes, stays in disconnected state
+- "Not Now" → ghost button → dialog closes, stays in disconnected state
 - If multiple volumes detected: show volume name/path in a radio group within the dialog
 
 ### Connected State
@@ -198,7 +198,7 @@ Appears as a non-fullscreen dialog (shadcn `dialog`, not `alert-dialog`) — use
 | Element | Copy |
 |---------|------|
 | Primary CTA (volume detected) | "Use this device" |
-| Primary CTA (dismiss volume) | "Ignore" |
+| Primary CTA (dismiss volume) | "Not Now" |
 | Disconnected heading | "No Device Connected" |
 | Disconnected body | "Connect your Octatrack in USB disk mode to get started. The app will detect it automatically." |
 | Device found heading | "Octatrack Found" |
@@ -231,7 +231,7 @@ Appears as a non-fullscreen dialog (shadcn `dialog`, not `alert-dialog`) — use
 | App launch | Disconnected state shown immediately; volume detection runs in background |
 | OT volume mounted | Toast appears ("Octatrack connected…"); detection dialog appears after 500ms debounce |
 | User confirms device | Dialog closes; sidebar Projects section activates; auto-navigate to Projects view |
-| User ignores device | Dialog closes; disconnected state remains |
+| User dismisses device | Dialog closes; disconnected state remains |
 | OT volume unmounted | Toast appears ("Octatrack disconnected."); content area resets to disconnected state |
 | Click disabled nav item | No navigation; cursor shows `not-allowed`; tooltip "Available in a future update" on hover |
 | Keyboard focus | Visible focus ring using accent color; all interactive elements keyboard-reachable |
