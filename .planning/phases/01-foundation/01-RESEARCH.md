@@ -764,27 +764,19 @@ CREATE INDEX idx_snapshots_created_at ON snapshots(created_at);
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Exact checksums for .work and bank files**
-   - What we know: .ot files use a simple 16-bit additive checksum over bytes 0x00..0x33D (verified). project.work and bank files have checksums but algorithm is not confirmed from public docs.
-   - What's unclear: Is it the same 16-bit additive checksum? CRC16? Proprietary?
-   - Recommendation: Extract from ot-tools-io source reading (format study, not code copy). Alternatively, run diff experiments: parse known good file, corrupt checksum, observe OT behavior. Round-trip tests will fail if checksum is wrong — this becomes visible immediately.
+1. **Exact checksums for .work and bank files** -- RESOLVED via Plan 04 Task 0
+   - Resolution: Plan 01-04 Task 0 creates a clean-room format spec document (`crates/ot-parser/format-spec.md`) that includes the checksum algorithm for all file types, derived from ot-tools-io source study. Round-trip tests validate correctness.
 
-2. **Exact size and unknown field positions in .work and bank files**
-   - What we know: .ot file is 832 bytes (fully documented). ProjectFile and BankFile sizes unknown from public research.
-   - What's unclear: What are the total sizes of project.work and bank01.work? Where are the known fields vs unknown blobs?
-   - Recommendation: Read ot-tools-io source (struct field names + sizes) to build clean-room field table. The planner should include a Wave 0 task: "Create clean-room OT format spec document for .work and bank files."
+2. **Exact size and unknown field positions in .work and bank files** -- RESOLVED via Plan 04 Task 0
+   - Resolution: Plan 01-04 Task 0 produces the format spec with field offset tables for ProjectFile, BankFile, MarkersFile, and ArrangementFile before any parser code is written. Unknown regions are documented with byte ranges for opaque blob preservation.
 
-3. **F_FULLFSYNC and FAT32 volumes on macOS 26.x**
-   - What we know: F_FULLFSYNC works for APFS/HFS+; FAT32 behavior on modern macOS is less documented.
-   - What's unclear: Does FAT32 driver on macOS 26 honor F_FULLFSYNC properly?
-   - Recommendation: The success criterion explicitly requires "verified by integration test on a real FAT32 volume." This test is the answer. Plan must include an integration test that writes, fsyncs, and verifies on an actual FAT32 disk.
+3. **F_FULLFSYNC and FAT32 volumes on macOS 26.x** -- RESOLVED via Plan design
+   - Resolution: Plan 01-05 implements atomic write with `sync_all()` (F_FULLFSYNC on macOS). Success criterion 3 requires verification on a real FAT32 volume. The integration test on physical hardware is the definitive answer -- no pre-research can substitute.
 
-4. **sysinfo version for macOS 26.x compatibility**
-   - What we know: sysinfo 0.35 released on crates.io; macOS 26.x (Darwin 25.2.0) is the target.
-   - What's unclear: Has sysinfo been verified against macOS 26.x specifically?
-   - Recommendation: Include `sysinfo::System::IS_SUPPORTED` check in startup. If `Disks::new_with_refreshed_list()` returns empty on macOS 26, fall back to directory sniffing of /Volumes/*.
+4. **sysinfo version for macOS 26.x compatibility** -- RESOLVED via Plan 07 fallback
+   - Resolution: Plan 01-07 Task 1 implements a three-tier fallback: (1) sysinfo `is_removable()` filter, (2) sysinfo all-disks scan skipping system volumes, (3) direct `/Volumes/*` directory scan. If sysinfo fails on macOS 26.x, the app still detects OT volumes.
 
 ---
 
