@@ -93,45 +93,45 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BROW-01 | — | Pending |
-| BROW-02 | — | Pending |
-| BROW-03 | — | Pending |
-| BROW-04 | — | Pending |
-| BROW-05 | — | Pending |
-| DETC-01 | — | Pending |
-| DETC-02 | — | Pending |
-| DETC-03 | — | Pending |
-| SAFE-01 | — | Pending |
-| SAFE-02 | — | Pending |
-| SAFE-03 | — | Pending |
-| SAFE-04 | — | Pending |
-| SAFE-05 | — | Pending |
-| SAFE-06 | — | Pending |
-| SAFE-07 | — | Pending |
-| MGMT-01 | — | Pending |
-| MGMT-02 | — | Pending |
-| MGMT-03 | — | Pending |
-| MGMT-04 | — | Pending |
-| SMPL-01 | — | Pending |
-| SMPL-02 | — | Pending |
-| SMPL-03 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| INTG-03 | — | Pending |
-| FNDN-01 | — | Pending |
-| FNDN-02 | — | Pending |
-| FNDN-03 | — | Pending |
-| FNDN-04 | — | Pending |
-| FNDN-05 | — | Pending |
-| FNDN-06 | — | Pending |
-| FNDN-07 | — | Pending |
-| FNDN-08 | — | Pending |
+| BROW-01 | Phase 1 | Pending |
+| BROW-02 | Phase 2 | Pending |
+| BROW-03 | Phase 2 | Pending |
+| BROW-04 | Phase 2 | Pending |
+| BROW-05 | Phase 2 | Pending |
+| DETC-01 | Phase 2 | Pending |
+| DETC-02 | Phase 2 | Pending |
+| DETC-03 | Phase 2 | Pending |
+| SAFE-01 | Phase 3 | Pending |
+| SAFE-02 | Phase 3 | Pending |
+| SAFE-03 | Phase 1 | Pending |
+| SAFE-04 | Phase 1 | Pending |
+| SAFE-05 | Phase 3 | Pending |
+| SAFE-06 | Phase 3 | Pending |
+| SAFE-07 | Phase 3 | Pending |
+| MGMT-01 | Phase 4 | Pending |
+| MGMT-02 | Phase 4 | Pending |
+| MGMT-03 | Phase 4 | Pending |
+| MGMT-04 | Phase 2 | Pending |
+| SMPL-01 | Phase 5 | Pending |
+| SMPL-02 | Phase 4 | Pending |
+| SMPL-03 | Phase 5 | Pending |
+| INTG-01 | Phase 5 | Pending |
+| INTG-02 | Phase 5 | Pending |
+| INTG-03 | Phase 5 | Pending |
+| FNDN-01 | Phase 1 | Pending |
+| FNDN-02 | Phase 1 | Pending |
+| FNDN-03 | Phase 1 | Pending |
+| FNDN-04 | Phase 1 | Pending |
+| FNDN-05 | Phase 1 | Pending |
+| FNDN-06 | Phase 1 | Pending |
+| FNDN-07 | Phase 1 | Pending |
+| FNDN-08 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 33 total
-- Mapped to phases: 0
-- Unmapped: 33
+- Mapped to phases: 33
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-29 after initial definition*
+*Last updated: 2026-04-29 after roadmap creation*
