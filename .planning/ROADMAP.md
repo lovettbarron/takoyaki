@@ -52,7 +52,13 @@ Plans:
   4. User can see project-level metadata: tempo, bank names, part names, and active machine types per track
   5. User can run a health check on any project that flags missing sample references, incompatible audio formats (non-44.1kHz, wrong bit depth, non-WAV/AIFF), and unused samples
   6. User can search and filter projects by name, tempo, or date using the SQLite index
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+- [ ] 02-01-PLAN.md — Rust Tauri commands for project list, detail, banks, samples, and SQLite indexing
+- [ ] 02-02-PLAN.md — Rust health check engine with audio format validation and background event emission
+- [ ] 02-03-PLAN.md — Frontend TypeScript types, IPC wrappers, navigation store, and project list view
+- [ ] 02-04-PLAN.md — Frontend project detail view with bank grid, samples tab, and metadata header
+- [ ] 02-05-PLAN.md — Frontend health tab, event listener, and end-to-end visual verification
 **UI hint**: yes
 
 ### Phase 3: Write Path and Backup
@@ -98,7 +104,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/7 | Planning complete | - |
-| 2. Read-Only Browser | 0/? | Not started | - |
+| 2. Read-Only Browser | 0/5 | Planning complete | - |
 | 3. Write Path and Backup | 0/? | Not started | - |
 | 4. Advanced Management | 0/? | Not started | - |
 | 5. Sample Assignment and Wallflower | 0/? | Not started | - |
