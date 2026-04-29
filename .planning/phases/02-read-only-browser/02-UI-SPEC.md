@@ -186,6 +186,8 @@ Phase 2 builds within the permanent chrome established in Phase 1. The 220px sid
 └──────────┴───────────────────────────────────────────────┘
 ```
 
+The primary visual anchor for the project list view is the NAME column — rendered in Display-weight Body Iosevka, flex-1 width, leftmost position — drawing the eye first and making project identity immediately scannable.
+
 - Search/filter bar: full-width bar, height 40px (h-10), `p-md` (16px) horizontal padding, `pb-sm` (8px) below bar before table
 - Table header row: Label weight, muted foreground, `border-b` border
 - Table data rows: Body weight, 36px row height, hover state uses Elevated surface background
@@ -211,7 +213,7 @@ Phase 2 builds within the permanent chrome established in Phase 1. The 220px sid
 ```
 
 - Breadcrumb: `p-md` (16px) horizontal, `py-sm` (8px) vertical. "Projects" is a clickable link (accent color). Separator: `/` character, muted foreground
-- Metadata header: fixed height 48px (h-12), `px-md py-sm`, `border-b`. Contains: Display-size project name (left), then Body-size "120.0 BPM · 8 banks · Modified 2026-01-12" (muted, right-aligned or following gap)
+- Metadata header: fixed height 48px (h-12), `px-md py-sm`, `border-b`. Contains: Display-size project name (left), then Body-size "120.0 BPM · 8 banks · Modified 2026-01-12" (muted, right-aligned or following gap). The Display-size project name is the primary visual anchor for the detail view.
 - Tab bar: shadcn Tabs, `border-b`, active tab has accent bottom border (2px solid), inactive tabs use Label weight muted foreground
 - Health tab badge: numeric count in a Badge component next to the "Health" label — only shown when issues > 0
 
@@ -319,8 +321,8 @@ Phase 2 builds within the permanent chrome established in Phase 1. The 220px sid
 
 **Search active:** Table filtered in real-time. If zero results:
 ```
-No projects match "{query}".
-Clear the search to see all projects.
+No matching projects
+No projects match "{query}". Clear the search to see all projects.
 ```
 
 **Project list empty (no projects on card):** 
@@ -408,7 +410,7 @@ The Octatrack card appears to be empty or uses an unsupported folder structure.
 | Table column: tempo | "BPM" |
 | Table column: banks | "BANKS" |
 | Table column: modified | "MODIFIED" |
-| Empty search result heading | "No results" |
+| Empty search result heading | "No matching projects" |
 | Empty search result body | "No projects match "{query}". Clear the search to see all projects." |
 | Empty card heading | "No projects found" |
 | Empty card body | "The Octatrack card appears to be empty or uses an unsupported folder structure." |
