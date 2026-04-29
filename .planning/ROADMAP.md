@@ -30,7 +30,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Writing any OT file through the atomic write engine stages to a temp dir on the same volume, fsyncs, then renames — verified by integration test on a real FAT32 volume
   4. A snapshot of all affected files is automatically created before any write operation is committed — verified by test that confirms snapshot exists before file changes land
   5. The SQLite database initializes with schema for backup history, project index, and snapshot records
-**Plans**: TBD
+**Plans:** 7 plans
+Plans:
+- [ ] 01-01-PLAN.md — Cargo workspace and Tauri app crate scaffold
+- [ ] 01-02-PLAN.md — Next.js frontend scaffold with shadcn and warm dark theme
+- [ ] 01-03-PLAN.md — .ot file parser with round-trip tests and indexing newtypes
+- [ ] 01-04-PLAN.md — Remaining OT file type parsers (.work, bank, markers, arrangement)
+- [ ] 01-05-PLAN.md — SQLite database, atomic write engine, and snapshot infrastructure
+- [ ] 01-06-PLAN.md — Frontend UI shell with sidebar navigation and disconnected state
+- [ ] 01-07-PLAN.md — Volume detection backend and frontend integration with confirmation dialog
 **UI hint**: yes
 
 ### Phase 2: Read-Only Browser
@@ -85,11 +93,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/? | Not started | - |
+| 1. Foundation | 0/7 | Planning complete | - |
 | 2. Read-Only Browser | 0/? | Not started | - |
 | 3. Write Path and Backup | 0/? | Not started | - |
 | 4. Advanced Management | 0/? | Not started | - |
