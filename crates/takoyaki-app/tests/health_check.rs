@@ -15,57 +15,73 @@ fn fixture_path(relative: &str) -> std::path::PathBuf {
 }
 
 #[test]
-#[ignore = "Requires Plan 02 production code: health::read_audio_spec"]
+#[ignore = "Requires Plan 02 production code: health::perform_health_check with SlotCheckInput"]
 fn test_health_missing_file() {
     // DETC-01: missing sample file detected as Error severity
     // Setup: construct a SlotCheckInput with a path that does not exist
     // Act: run the health check logic on this slot
     // Assert: result contains HealthIssue::Error with "File not found" in detail
-    todo!("Plan 02 creates health::perform_health_check")
+    todo!("Plan 02 creates health::perform_health_check — integration test needs async runtime")
 }
 
 #[test]
-#[ignore = "Requires Plan 02 production code: health::read_audio_spec"]
 fn test_health_wrong_sample_rate() {
-    // DETC-02: 48 kHz WAV detected as Warning severity
-    // Setup: point at fixture file pad_48000.wav
-    // Act: read_audio_spec() + check_format_compatibility()
-    // Assert: FormatIssue::WrongSampleRate(48000) in results
+    // DETC-02: 48 kHz WAV detected as Warning severity via read_audio_spec + check_format_compatibility
     let path = fixture_path("AUDIO/pad_48000.wav");
     assert!(path.exists(), "Fixture file must exist: {}", path.display());
-    todo!("Plan 02 creates health::read_audio_spec and health::check_format_compatibility")
+
+    let spec = takoyaki_app::health::read_audio_spec(&path).expect("Should read WAV spec");
+    let issues = takoyaki_app::health::check_format_compatibility(&spec);
+
+    assert!(!issues.is_empty(), "48kHz WAV should have format issues");
+    let has_wrong_rate = issues.iter().any(|issue| {
+        matches!(issue, takoyaki_app::health::FormatIssue::WrongSampleRate(48000))
+    });
+    assert!(has_wrong_rate, "Should detect WrongSampleRate(48000), got: {:?}", issues);
 }
 
 #[test]
-#[ignore = "Requires Plan 02 production code: health::read_audio_spec"]
 fn test_health_correct_sample_rate() {
     // DETC-02 (negative case): 44.1 kHz WAV produces no format issues
-    // Setup: point at fixture file kick_44100.wav
-    // Act: read_audio_spec() + check_format_compatibility()
-    // Assert: no FormatIssue items in results
     let path = fixture_path("AUDIO/kick_44100.wav");
     assert!(path.exists(), "Fixture file must exist: {}", path.display());
-    todo!("Plan 02 creates health::read_audio_spec and health::check_format_compatibility")
+
+    let spec = takoyaki_app::health::read_audio_spec(&path).expect("Should read WAV spec");
+    let issues = takoyaki_app::health::check_format_compatibility(&spec);
+
+    assert!(
+        issues.is_empty(),
+        "44.1kHz WAV should have no format issues, got: {:?}",
+        issues
+    );
 }
 
 #[test]
-#[ignore = "Requires Plan 02 production code: health::read_audio_spec"]
 fn test_health_unsupported_format() {
-    // DETC-02: non-WAV/AIFF file detected as Error severity
-    // Setup: point at fixture file not_audio.txt
-    // Act: read_audio_spec() returns AudioSpec::Unknown
-    // Assert: check_format_compatibility returns FormatIssue::UnsupportedFormat
+    // DETC-02: non-WAV/AIFF file detected via check_format_compatibility
     let path = fixture_path("AUDIO/not_audio.txt");
     assert!(path.exists(), "Fixture file must exist: {}", path.display());
-    todo!("Plan 02 creates health::read_audio_spec and health::check_format_compatibility")
+
+    let spec = takoyaki_app::health::read_audio_spec(&path).expect("Should return Unknown");
+    assert!(
+        matches!(spec, takoyaki_app::health::AudioSpec::Unknown { .. }),
+        "Text file should produce AudioSpec::Unknown, got {:?}", spec
+    );
+
+    let issues = takoyaki_app::health::check_format_compatibility(&spec);
+    assert_eq!(issues.len(), 1, "Should have exactly one format issue");
+    assert!(
+        matches!(issues[0], takoyaki_app::health::FormatIssue::UnsupportedFormat(_)),
+        "Should detect UnsupportedFormat, got: {:?}", issues
+    );
 }
 
 #[test]
-#[ignore = "Requires Plan 02 production code: health::perform_health_check"]
+#[ignore = "Requires Plan 02 production code: health::perform_health_check with SlotCheckInput"]
 fn test_health_unused_sample() {
     // DETC-03: slot with no track references detected as Info severity
     // Setup: construct a SlotCheckInput with occupied=true, empty track_references
     // Act: run the health check logic on this slot
     // Assert: result contains HealthIssue::Info with "not referenced" in detail
-    todo!("Plan 02 creates health::perform_health_check")
+    todo!("Plan 02 creates health::perform_health_check — integration test needs async runtime")
 }
