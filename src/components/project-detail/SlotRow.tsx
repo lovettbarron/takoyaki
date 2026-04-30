@@ -12,13 +12,38 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { SampleSlot } from "@/lib/types";
+import type { SampleSlot, HealthIssue } from "@/lib/types";
 
 interface SlotRowProps {
   slot: SampleSlot;
   slotType: "flex" | "static";
   /** Bank cross-reference data from ProjectDetail */
   crossRefs?: string[];
+  /** Health issues from the background health check */
+  healthIssues?: HealthIssue[];
+}
+
+function getSlotHealth(
+  slotType: "flex" | "static",
+  slotIndex: number,
+  healthIssues?: HealthIssue[]
+): { status: "ok" | "error" | "warning" | "info" | "unknown"; tooltip: string } {
+  if (!healthIssues) return { status: "unknown", tooltip: "Health check in progress..." };
+
+  const issue = healthIssues.find(
+    (i) => i.slot_type === slotType && i.slot_index === slotIndex
+  );
+
+  if (!issue) return { status: "ok", tooltip: "Sample OK" };
+
+  switch (issue.severity) {
+    case "error":
+      return { status: "error", tooltip: `File not found: ${issue.path ?? issue.detail}` };
+    case "warning":
+      return { status: "warning", tooltip: issue.detail };
+    case "info":
+      return { status: "info", tooltip: issue.detail };
+  }
 }
 
 function formatSampleRate(rate: number | null): string {
@@ -28,7 +53,13 @@ function formatSampleRate(rate: number | null): string {
   return String(rate);
 }
 
-function StatusIcon({ status }: { status: string }) {
+function StatusIcon({
+  status,
+  tooltip,
+}: {
+  status: "ok" | "error" | "warning" | "info" | "unknown";
+  tooltip: string;
+}) {
   if (status === "ok") {
     return (
       <Tooltip>
@@ -36,25 +67,25 @@ function StatusIcon({ status }: { status: string }) {
           <CircleCheck
             size={16}
             className="text-[hsl(140,60%,42%)]"
-            aria-label="Sample OK"
+            aria-label={tooltip}
           />
         </TooltipTrigger>
-        <TooltipContent>Sample OK</TooltipContent>
+        <TooltipContent>{tooltip}</TooltipContent>
       </Tooltip>
     );
   }
 
-  if (status === "missing" || status === "error") {
+  if (status === "error") {
     return (
       <Tooltip>
         <TooltipTrigger>
           <CircleX
             size={16}
             className="text-[hsl(0,68%,48%)]"
-            aria-label="File not found"
+            aria-label={tooltip}
           />
         </TooltipTrigger>
-        <TooltipContent>File not found</TooltipContent>
+        <TooltipContent>{tooltip}</TooltipContent>
       </Tooltip>
     );
   }
@@ -66,23 +97,43 @@ function StatusIcon({ status }: { status: string }) {
           <CircleAlert
             size={16}
             className="text-[hsl(38,85%,55%)]"
-            aria-label="Sample has a format warning"
+            aria-label={tooltip}
           />
         </TooltipTrigger>
-        <TooltipContent>Sample has a format warning</TooltipContent>
+        <TooltipContent>{tooltip}</TooltipContent>
       </Tooltip>
     );
   }
 
-  // Unscanned or unknown — no icon
+  if (status === "info") {
+    return (
+      <Tooltip>
+        <TooltipTrigger>
+          <CircleAlert
+            size={16}
+            className="text-[hsl(210,40%,52%)]"
+            aria-label={tooltip}
+          />
+        </TooltipTrigger>
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  // unknown — health check in progress, no icon
   return null;
 }
 
-export function SlotRow({ slot, crossRefs }: SlotRowProps) {
+export function SlotRow({ slot, slotType, crossRefs, healthIssues }: SlotRowProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const slotNumber = String(slot.slot_index + 1).padStart(3, "0");
   const isMuted = !slot.occupied;
+
+  // Derive health status from the background health check results
+  const slotHealth = slot.occupied
+    ? getSlotHealth(slotType, slot.slot_index, healthIssues)
+    : null;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -129,7 +180,9 @@ export function SlotRow({ slot, crossRefs }: SlotRowProps) {
 
         {/* Status icon — w-12 */}
         <span className="w-12 shrink-0 flex items-center justify-center">
-          {slot.occupied && <StatusIcon status={slot.status} />}
+          {slotHealth && (
+            <StatusIcon status={slotHealth.status} tooltip={slotHealth.tooltip} />
+          )}
         </span>
       </CollapsibleTrigger>
 

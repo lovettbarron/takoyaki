@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Toggle } from "@/components/ui/toggle";
 import { getProjectSamples, getProjectDetail } from "@/lib/tauri";
-import type { SampleSlot, BankDetail } from "@/lib/types";
+import type { SampleSlot, BankDetail, HealthCheckComplete, HealthIssue } from "@/lib/types";
 import { SlotRow } from "./SlotRow";
 
 interface SamplesTabProps {
@@ -69,9 +69,10 @@ interface SlotSectionProps {
   showEmpty: boolean;
   crossRefMap: Map<number, string[]>;
   slotType: "flex" | "static";
+  healthIssues?: HealthIssue[];
 }
 
-function SlotSection({ slots, showEmpty, crossRefMap, slotType }: SlotSectionProps) {
+function SlotSection({ slots, showEmpty, crossRefMap, slotType, healthIssues }: SlotSectionProps) {
   const filtered = slots.filter((s) => showEmpty || s.occupied);
 
   return (
@@ -83,6 +84,7 @@ function SlotSection({ slots, showEmpty, crossRefMap, slotType }: SlotSectionPro
           slot={slot}
           slotType={slotType}
           crossRefs={crossRefMap.get(slot.slot_index)}
+          healthIssues={healthIssues}
         />
       ))}
     </div>
@@ -96,6 +98,13 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
     queryKey: ["samples", projectId],
     queryFn: () => getProjectSamples(projectId),
     enabled: !!projectId,
+  });
+
+  // Read health data from react-query cache (populated by HealthEventListener)
+  const { data: healthData } = useQuery<HealthCheckComplete | null>({
+    queryKey: ["health", projectId],
+    queryFn: () => Promise.resolve(null as any),
+    enabled: false,
   });
 
   const banks = useCrossRefs(projectId);
@@ -142,6 +151,7 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
           showEmpty={showEmpty}
           crossRefMap={crossRefMap}
           slotType="flex"
+          healthIssues={healthData?.issues}
         />
 
         {/* STATIC SAMPLES section */}
@@ -153,6 +163,7 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
           showEmpty={showEmpty}
           crossRefMap={crossRefMap}
           slotType="static"
+          healthIssues={healthData?.issues}
         />
       </div>
     </div>
