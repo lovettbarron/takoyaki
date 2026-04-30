@@ -1,3 +1,4 @@
+mod atomic;
 mod commands;
 pub mod db;
 mod error;
