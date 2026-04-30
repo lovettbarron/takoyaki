@@ -7,8 +7,8 @@
 
 use crate::db;
 use crate::error::AppError;
+use crate::AppState;
 use specta::Type;
-use std::sync::Mutex;
 use tracing::info;
 
 /// Assumption guard A2: OT stores tempo as integer × TEMPO_SCALE_FACTOR.
@@ -63,15 +63,6 @@ pub struct BankSummary {
     pub bank_index: u8,
     pub populated: bool,
     pub pattern_count: u8,
-}
-
-// ---------------------------------------------------------------------------
-// AppState definition (used by all commands in this file)
-// ---------------------------------------------------------------------------
-
-pub struct AppState {
-    pub db: Mutex<db::Database>,
-    pub volume_path: Mutex<Option<std::path::PathBuf>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -254,8 +245,8 @@ pub async fn index_ot_projects(
     state: tauri::State<'_, AppState>,
 ) -> Result<usize, AppError> {
     let volume_path = {
-        let vp = state.volume_path.lock().map_err(|e| AppError::Lock(e.to_string()))?;
-        vp.clone().ok_or_else(|| AppError::Device("No OT volume mounted".to_string()))?
+        let device = state.device.lock().map_err(|e| AppError::Lock(e.to_string()))?;
+        device.mount_point.clone().ok_or_else(|| AppError::Device("No OT volume mounted".to_string()))?
     };
 
     let sets_dir = volume_path.join("SETS");

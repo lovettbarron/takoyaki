@@ -91,7 +91,7 @@ fn filename_from_path(path: &str) -> String {
 #[tauri::command]
 #[specta::specta]
 pub async fn get_project_samples(
-    state: tauri::State<'_, crate::commands::projects::AppState>,
+    state: tauri::State<'_, crate::AppState>,
     project_id: String,
 ) -> Result<SampleSlotResponse, AppError> {
     let card_path = {
