@@ -11,6 +11,7 @@ import { ProjectTable } from "@/components/projects/ProjectTable";
 import { ProjectDetailView } from "@/components/project-detail/ProjectDetailView";
 import { HealthEventListener } from "@/components/health/HealthEventListener";
 import { DryRunModal } from "@/components/backups/DryRunModal";
+import { BackupsView } from "@/components/backups/BackupsView";
 import { BackupProgressView } from "@/components/backup-progress/BackupProgressView";
 import { InlineSuccessBanner } from "@/components/backup-progress/InlineSuccessBanner";
 import { Separator } from "@/components/ui/separator";
@@ -217,11 +218,7 @@ export default function Home() {
                 }
               />
             )}
-            {view === "backups" && (
-              <div className="p-4 font-mono text-sm text-muted-foreground">
-                Backups view -- Plan 04
-              </div>
-            )}
+            {view === "backups" && <BackupsView />}
           </>
         )}
       </main>
