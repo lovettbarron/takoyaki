@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-04-30T04:30:38.189Z"
-last_activity: 2026-04-30 -- Phase --phase execution started
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-04-30T04:38:41.305Z"
+last_activity: 2026-04-30
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 13
-  completed_plans: 1
-  percent: 8
+  completed_plans: 2
+  percent: 15
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 ## Current Position
 
 Phase: 01 (Foundation) — EXECUTING
-Plan: 2 of 7
-Status: Completed Plan 01-01 (Cargo Workspace + Tauri Skeleton)
-Last activity: 2026-04-30 -- Completed 01-01-PLAN.md
+Plan: 3 of 7
+Status: Ready to execute
+Last activity: 2026-04-30
 
-Progress: [█░░░░░░░░░] 8%
+Progress: [██░░░░░░░░] 15%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [█░░░░░░░░░] 8%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 01-foundation P02 | 4 min | 2 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Recent decisions affecting current work:
 - Phase 3: Research flag — verify FAT32 rename atomicity with integration test on real FAT32 volume before depending on it
 - Plan 01-01: Used specta-typescript 0.0.11 (not 0.0.9) for specta rc.24 compatibility
 - Plan 01-01: Added protocol-asset Tauri feature required by assetProtocol config
+- @base-ui/react is a required peer dependency for shadcn base-nova style — must be installed explicitly alongside shadcn components
+- next.config.mjs uses import.meta.url + fileURLToPath for ESM-compatible __dirname (required when setting turbopack.root)
 
 ### Pending Todos
 
@@ -85,8 +88,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-30T04:29:17Z
-Stopped at: Completed 01-01-PLAN.md
-Resume file: .planning/phases/01-foundation/01-02-PLAN.md
+Last session: 2026-04-30T04:38:41.301Z
+Stopped at: Completed 01-02-PLAN.md
+Resume file: .planning/phases/01-foundation/01-03-PLAN.md
 
 **Planned Phase:** 02 (Read-Only Browser) — 6 plans — 2026-04-30T04:29:02.284Z
