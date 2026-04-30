@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 3 context gathered
-last_updated: "2026-04-30T18:11:59.324Z"
-last_activity: 2026-04-30
+status: executing
+stopped_at: "Completed 03-01: backup backend, db::backups, V2 migration, 5 Tauri commands, integration tests"
+last_updated: "2026-04-30T19:18:44.337Z"
+last_activity: 2026-04-30 -- Phase --phase execution started
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_plans: 17
+  completed_plans: 14
+  percent: 82
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-29)
 
 **Core value:** An Octatrack user can manage their projects and samples with complete confidence that their creative work is never at risk — every destructive operation is snapshot-protected, previewed, and atomically applied.
-**Current focus:** Phase --phase — 02
+**Current focus:** Phase --phase — 03
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-30
+Phase: --phase (03) — EXECUTING
+Plan: 1 of --name
+Status: Executing Phase --phase
+Last activity: 2026-04-30 -- Phase --phase execution started
 
 Progress: [██████████] 100%
 
@@ -66,6 +66,7 @@ Progress: [██████████] 100%
 | Phase 02-read-only-browser P03 | 3 | 2 tasks | 9 files |
 | Phase 02-read-only-browser P04 | 4 | 2 tasks | 11 files |
 | Phase 02-read-only-browser P05 | 209 | 4 tasks | 8 files |
+| Phase 03-write-path-and-backup P01 | 395 | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,9 @@ Recent decisions affecting current work:
 - base-ui Progress.Root requires value prop — null is the standard indeterminate value per base-ui API
 - HealthTab reads react-query cache with enabled: false — never fetches, only reads what HealthEventListener writes via setQueryData
 - getSlotHealth() matches i.slot_type === slotType && i.slot_index === slotIndex — slot identity for health issue lookup
+- Plan 03-01: insert_backup takes &mut Connection — rusqlite transaction() requires mutable borrow
+- Plan 03-01: atomic module made pub in lib.rs to allow integration tests to access sha256_hex and SnapshotEngine
+- Plan 03-01: restore_snapshot records pre-restore snapshot as a backup record with operation=pre-restore for full audit trail
 
 ### Pending Todos
 
@@ -130,8 +134,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 3 context gathered
-Resume file: --resume-file
+Last session: 2026-04-30T19:18:44.333Z
+Stopped at: Completed 03-01: backup backend, db::backups, V2 migration, 5 Tauri commands, integration tests
+Resume file: None
 
-**Planned Phase:** 02 (Read-Only Browser) — 6 plans — 2026-04-30T04:29:02.284Z
+**Planned Phase:** 3 (Write Path and Backup) — 4 plans — 2026-04-30T19:08:39.242Z
