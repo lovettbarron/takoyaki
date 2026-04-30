@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 03-01: backup backend, db::backups, V2 migration, 5 Tauri commands, integration tests"
-last_updated: "2026-04-30T19:18:44.337Z"
+stopped_at: "Completed 03-02: Phase 3 TypeScript types, backup store, IPC wrappers, scroll-area, sidebar activation"
+last_updated: "2026-04-30T19:24:05.904Z"
 last_activity: 2026-04-30 -- Phase --phase execution started
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 17
-  completed_plans: 14
-  percent: 82
+  completed_plans: 15
+  percent: 88
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 1 of --name
 Status: Executing Phase --phase
 Last activity: 2026-04-30 -- Phase --phase execution started
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [██████████] 100%
 | Phase 02-read-only-browser P04 | 4 | 2 tasks | 11 files |
 | Phase 02-read-only-browser P05 | 209 | 4 tasks | 8 files |
 | Phase 03-write-path-and-backup P01 | 395 | 3 tasks | 13 files |
+| Phase 03-write-path-and-backup P02 | 3 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,9 @@ Recent decisions affecting current work:
 - Plan 03-01: insert_backup takes &mut Connection — rusqlite transaction() requires mutable borrow
 - Plan 03-01: atomic module made pub in lib.rs to allow integration tests to access sha256_hex and SnapshotEngine
 - Plan 03-01: restore_snapshot records pre-restore snapshot as a backup record with operation=pre-restore for full audit trail
+- Plan 03-02: BackupEvent modeled as discriminated union on event string field matching Rust enum variant names — enables exhaustive type-narrowing in consumer components
+- Plan 03-02: navigateToBackups() resets selectedProjectId/selectedBankIndex to avoid stale detail view state
+- Plan 03-02: page.tsx onSectionChange syncs both local activeSection state and navigation store — local state drives sidebar highlight, nav store drives content area render
 
 ### Pending Todos
 
@@ -134,8 +138,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-30T19:18:44.333Z
-Stopped at: Completed 03-01: backup backend, db::backups, V2 migration, 5 Tauri commands, integration tests
+Last session: 2026-04-30T19:24:05.900Z
+Stopped at: Completed 03-02: Phase 3 TypeScript types, backup store, IPC wrappers, scroll-area, sidebar activation
 Resume file: None
 
 **Planned Phase:** 3 (Write Path and Backup) — 4 plans — 2026-04-30T19:08:39.242Z

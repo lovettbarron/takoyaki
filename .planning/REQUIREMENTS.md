@@ -31,15 +31,20 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Backup & Data Safety
 
-- [ ] **SAFE-01**: User can back up any OT project to a Mac-side location (full directory tree copy)
-- [ ] **SAFE-02**: User can verify backup integrity via checksum comparison between source and backup
+- [x] **SAFE-01
+**: User can back up any OT project to a Mac-side location (full directory tree copy)
+- [x] **SAFE-02
+**: User can verify backup integrity via checksum comparison between source and backup
 - [x] **SAFE-03
 **: System automatically creates a snapshot of all affected files before any write operation
 - [x] **SAFE-04
 **: All write operations use atomic staged writes (write to staging, verify, then rename — all-or-nothing)
-- [ ] **SAFE-05**: User can browse snapshot history chronologically with timestamps and operation labels
-- [ ] **SAFE-06**: User can restore any previous snapshot to roll back a project to a prior state
-- [ ] **SAFE-07**: User can preview exactly what files will change before any destructive operation is committed (dry-run mode)
+- [x] **SAFE-05
+**: User can browse snapshot history chronologically with timestamps and operation labels
+- [x] **SAFE-06
+**: User can restore any previous snapshot to roll back a project to a prior state
+- [x] **SAFE-07
+**: User can preview exactly what files will change before any destructive operation is committed (dry-run mode)
 
 ### Project Management
 
