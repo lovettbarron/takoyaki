@@ -5,6 +5,7 @@ import "@fontsource/iosevka/500.css";
 import "@fontsource/iosevka/600.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
+import { TauriEventListener } from "@/components/tauri-event-listener";
 
 export const metadata: Metadata = {
   title: "Takoyaki",
@@ -24,6 +25,7 @@ export default function RootLayout({
           <div id="main-content" className="h-screen overflow-hidden">
             {children}
           </div>
+          <TauriEventListener />
           <Toaster position="bottom-right" />
         </Providers>
       </body>
