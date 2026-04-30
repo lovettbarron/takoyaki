@@ -1,10 +1,13 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, Channel } from "@tauri-apps/api/core";
 import type {
   ProjectFilter,
   ProjectSummary,
   ProjectDetail,
   BankDetail,
   SampleSlotResponse,
+  BackupSummary,
+  FileChangeManifest,
+  BackupEvent,
 } from "./types";
 
 export interface DeviceStatus {
@@ -54,4 +57,43 @@ export async function getProjectSamples(
 export async function runHealthCheck(projectId: string): Promise<void> {
   // Results arrive via "health-complete" event, not return value
   return invoke("run_health_check", { projectId });
+}
+
+// Phase 3: Backup IPC wrappers
+
+export async function listBackups(
+  projectId?: string
+): Promise<BackupSummary[]> {
+  return invoke("list_backups", { projectId: projectId ?? null });
+}
+
+export async function computeDryRun(
+  projectId: string,
+  operation: string,
+  backupId?: string
+): Promise<FileChangeManifest> {
+  return invoke("compute_dry_run", {
+    projectId,
+    operation,
+    backupId: backupId ?? null,
+  });
+}
+
+export async function backupProject(
+  projectId: string,
+  label: string,
+  onEvent: Channel<BackupEvent>
+): Promise<void> {
+  return invoke("backup_project", { projectId, label, onEvent });
+}
+
+export async function restoreSnapshot(
+  backupId: string,
+  onEvent: Channel<BackupEvent>
+): Promise<void> {
+  return invoke("restore_snapshot", { backupId, onEvent });
+}
+
+export async function cancelBackup(): Promise<void> {
+  return invoke("cancel_backup");
 }

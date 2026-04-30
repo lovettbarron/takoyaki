@@ -3,7 +3,7 @@ import type { ProjectFilter } from "@/lib/types";
 
 // Navigation store — manages view state and breadcrumb context
 
-type View = "project-list" | "project-detail";
+type View = "project-list" | "project-detail" | "backups";
 
 interface NavigationState {
   view: View;
@@ -13,6 +13,7 @@ interface NavigationState {
 
   navigateToProject: (projectId: string) => void;
   navigateToList: () => void;
+  navigateToBackups: () => void;
   selectBank: (bankIndex: number | null) => void;
   setActiveTab: (tab: "banks" | "samples" | "health") => void;
 }
@@ -32,6 +33,8 @@ export const useNavigationStore = create<NavigationState>((set) => ({
     }),
   navigateToList: () =>
     set({ view: "project-list", selectedProjectId: null, selectedBankIndex: null }),
+  navigateToBackups: () =>
+    set({ view: "backups", selectedProjectId: null, selectedBankIndex: null, activeTab: "banks" }),
   selectBank: (bankIndex) => set({ selectedBankIndex: bankIndex }),
   setActiveTab: (tab) => set({ activeTab: tab }),
 }));

@@ -75,3 +75,56 @@ export interface HealthCheckComplete {
   issues: HealthIssue[];
   scanned_at: string;
 }
+
+// Phase 3: Backup types (SAFE-01, SAFE-02, SAFE-05, SAFE-06, SAFE-07)
+
+export interface BackupSummary {
+  id: string;
+  project_id: string;
+  project_name: string;
+  dest_path: string;
+  created_at: string;
+  operation: string;       // "manual-backup" | "pre-restore"
+  file_count: number;
+  total_bytes: number;
+  checksum_ok: boolean;
+  status: string;          // "in-progress" | "complete"
+}
+
+export interface BackupFileRecord {
+  id: string;
+  backup_id: string;
+  relative_path: string;
+  stored_path: string;
+  file_hash: string;
+  size_bytes: number;
+  change_type: string;
+}
+
+export type ChangeType = "Added" | "Modified" | "Removed" | "Unchanged";
+
+export interface FileChangeEntry {
+  path: string;
+  changeType: ChangeType;
+  sizeBytes: number;
+}
+
+export interface FileChangeManifest {
+  entries: FileChangeEntry[];
+  totalAdded: number;
+  totalModified: number;
+  totalRemoved: number;
+  totalUnchanged: number;
+  totalBytes: number;
+  destinationPath: string;
+  operationLabel: string;
+  projectName: string;
+}
+
+export type BackupEventType = "started" | "progress" | "complete" | "failed";
+
+export type BackupEvent =
+  | { event: "started"; data: { totalFiles: number; destination: string } }
+  | { event: "progress"; data: { filesCopied: number; totalFiles: number; currentFile: string } }
+  | { event: "complete"; data: { filesCopied: number; totalBytes: number; destination: string; checksumOk: boolean } }
+  | { event: "failed"; data: { reason: string } };
