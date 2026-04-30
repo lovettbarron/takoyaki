@@ -1,7 +1,8 @@
 use serde::Serialize;
+use specta::Type;
 use thiserror::Error;
 
-#[derive(Debug, Error, Serialize)]
+#[derive(Debug, Error, Serialize, Type)]
 pub enum AppError {
     #[error("IO error: {0}")]
     Io(String),
@@ -10,7 +11,10 @@ pub enum AppError {
     Parse(String),
 
     #[error("Database error: {0}")]
-    Db(String),
+    Database(String),
+
+    #[error("Lock error: {0}")]
+    Lock(String),
 
     #[error("Device error: {0}")]
     Device(String),
@@ -27,7 +31,7 @@ impl From<std::io::Error> for AppError {
 
 impl From<rusqlite::Error> for AppError {
     fn from(e: rusqlite::Error) -> Self {
-        AppError::Db(e.to_string())
+        AppError::Database(e.to_string())
     }
 }
 
