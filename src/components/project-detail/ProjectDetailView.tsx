@@ -21,7 +21,11 @@ import { BanksTab } from "./BanksTab";
 import { SamplesTab } from "./SamplesTab";
 import { HealthTab } from "./HealthTab";
 
-export function ProjectDetailView() {
+interface ProjectDetailViewProps {
+  onBackUp?: () => void;
+}
+
+export function ProjectDetailView({ onBackUp }: ProjectDetailViewProps = {}) {
   const {
     selectedProjectId,
     selectedBankIndex,
@@ -99,7 +103,7 @@ export function ProjectDetailView() {
           <Skeleton className="h-4 w-64" />
         </div>
       ) : project ? (
-        <MetadataHeader project={project} />
+        <MetadataHeader project={project} onBackUp={onBackUp} />
       ) : null}
 
       {/* Tabs */}

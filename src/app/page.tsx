@@ -3,14 +3,20 @@
 import { useState, useEffect } from "react";
 import { useDeviceStore } from "@/lib/stores/device";
 import { useNavigationStore } from "@/lib/stores/navigation";
+import { useBackupStore } from "@/lib/stores/backup";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { DeviceStatusBadge } from "@/components/device-status-badge";
 import { VolumeConfirmDialog } from "@/components/volume-confirm-dialog";
 import { ProjectTable } from "@/components/projects/ProjectTable";
 import { ProjectDetailView } from "@/components/project-detail/ProjectDetailView";
 import { HealthEventListener } from "@/components/health/HealthEventListener";
+import { DryRunModal } from "@/components/backups/DryRunModal";
+import { BackupProgressView } from "@/components/backup-progress/BackupProgressView";
+import { InlineSuccessBanner } from "@/components/backup-progress/InlineSuccessBanner";
 import { Separator } from "@/components/ui/separator";
-import { confirmDevice, dismissDevice } from "@/lib/tauri";
+import { confirmDevice, dismissDevice, computeDryRun, backupProject, restoreSnapshot } from "@/lib/tauri";
+import { Channel } from "@tauri-apps/api/core";
+import type { BackupEvent } from "@/lib/types";
 
 type ActiveSection = "projects" | "samples" | "backups" | "settings";
 
@@ -18,7 +24,22 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState<ActiveSection>("projects");
   const { connected, mountPoint, confirmed, setConfirmed } = useDeviceStore();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const { view, navigateToBackups, navigateToList } = useNavigationStore();
+  const { view, selectedProjectId: navProjectId, navigateToBackups, navigateToList } = useNavigationStore();
+  const {
+    status,
+    dryRunManifest,
+    successBanner,
+    activeProjectId,
+    activeProjectName,
+    activeOperation,
+    activeBackupId,
+    setStatus,
+    setProgress,
+    setSuccessBanner,
+    setDryRunManifest,
+    startOperation,
+    reset,
+  } = useBackupStore();
 
   // Show confirmation dialog when device is detected but not yet confirmed (D-14)
   // Debounce: 500ms delay per UI-SPEC.md Interaction Contract
@@ -61,6 +82,77 @@ export default function Home() {
     }
     setShowConfirmDialog(false);
   };
+
+  // Backup trigger — called from MetadataHeader onBackUp prop
+  async function handleBackUpClick(projectId: string, projectName: string) {
+    startOperation(projectId, projectName, "backup");
+    try {
+      const manifest = await computeDryRun(projectId, "backup");
+      setDryRunManifest(manifest);
+    } catch {
+      reset();
+    }
+  }
+
+  // Dry-run apply — start actual backup/restore operation
+  async function handleDryRunApply() {
+    setDryRunManifest(null);
+    setStatus("in-progress");
+    const channel = new Channel<BackupEvent>();
+    channel.onmessage = (event) => {
+      switch (event.event) {
+        case "started":
+          // already in progress state
+          break;
+        case "progress":
+          setProgress({
+            filesCopied: event.data.filesCopied,
+            totalFiles: event.data.totalFiles,
+            currentFile: event.data.currentFile,
+          });
+          break;
+        case "complete":
+          setStatus("complete");
+          setSuccessBanner({
+            message:
+              activeOperation === "backup"
+                ? `Backed up ${activeProjectName}`
+                : `Restored ${activeProjectName}`,
+            destination: event.data.destination,
+            checksumOk: event.data.checksumOk,
+            projectName: activeProjectName ?? "",
+            fileCount: event.data.filesCopied,
+            totalBytes: event.data.totalBytes,
+            operation: activeOperation ?? "backup",
+          });
+          break;
+        case "failed":
+          setStatus("failed");
+          break;
+      }
+    };
+    try {
+      if (activeOperation === "backup" && activeProjectId) {
+        await backupProject(activeProjectId, "backup", channel);
+      } else if (activeOperation === "restore" && activeBackupId) {
+        await restoreSnapshot(activeBackupId, channel);
+      }
+    } catch {
+      setStatus("failed");
+    }
+  }
+
+  // Dry-run cancel — user clicked "Don't Apply"
+  function handleDryRunCancel() {
+    setDryRunManifest(null);
+    reset();
+  }
+
+  // Success banner dismiss
+  function handleBannerDismiss() {
+    setSuccessBanner(null);
+    reset();
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -107,14 +199,45 @@ export default function Home() {
               </p>
             </div>
           </div>
+        ) : status === "in-progress" ? (
+          <>
+            <HealthEventListener />
+            <BackupProgressView />
+          </>
         ) : (
           <>
             <HealthEventListener />
             {view === "project-list" && <ProjectTable />}
-            {view === "project-detail" && <ProjectDetailView />}
+            {view === "project-detail" && (
+              <ProjectDetailView
+                onBackUp={
+                  navProjectId && status === "idle"
+                    ? () => handleBackUpClick(navProjectId, "")
+                    : undefined
+                }
+              />
+            )}
+            {view === "backups" && (
+              <div className="p-4 font-mono text-sm text-muted-foreground">
+                Backups view -- Plan 04
+              </div>
+            )}
           </>
         )}
       </main>
+
+      {/* Success banner overlay */}
+      {successBanner && (
+        <InlineSuccessBanner banner={successBanner} onDismiss={handleBannerDismiss} />
+      )}
+
+      {/* Dry-run modal */}
+      <DryRunModal
+        open={dryRunManifest !== null}
+        manifest={dryRunManifest}
+        onApply={handleDryRunApply}
+        onCancel={handleDryRunCancel}
+      />
 
       {/* Volume confirmation dialog */}
       <VolumeConfirmDialog
