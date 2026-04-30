@@ -19,6 +19,7 @@ import type { HealthCheckComplete } from "@/lib/types";
 import { MetadataHeader } from "./MetadataHeader";
 import { BanksTab } from "./BanksTab";
 import { SamplesTab } from "./SamplesTab";
+import { HealthTab } from "./HealthTab";
 
 export function ProjectDetailView() {
   const {
@@ -166,14 +167,14 @@ export function ProjectDetailView() {
           ) : null}
         </TabsContent>
 
-        {/* Health Tab Content — placeholder for Plan 05 */}
+        {/* Health Tab Content */}
         <TabsContent
           value="health"
           className="flex-1 overflow-auto p-4 mt-0"
         >
-          <div className="text-sm text-muted-foreground">
-            Health tab (Plan 05)
-          </div>
+          {selectedProjectId && (
+            <HealthTab projectId={selectedProjectId} />
+          )}
         </TabsContent>
       </Tabs>
     </div>

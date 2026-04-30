@@ -8,6 +8,7 @@ import { DeviceStatusBadge } from "@/components/device-status-badge";
 import { VolumeConfirmDialog } from "@/components/volume-confirm-dialog";
 import { ProjectTable } from "@/components/projects/ProjectTable";
 import { ProjectDetailView } from "@/components/project-detail/ProjectDetailView";
+import { HealthEventListener } from "@/components/health/HealthEventListener";
 import { Separator } from "@/components/ui/separator";
 import { confirmDevice, dismissDevice } from "@/lib/tauri";
 
@@ -101,7 +102,7 @@ export default function Home() {
           </div>
         ) : (
           <>
-            {/* HealthEventListener will be mounted here by Plan 05 */}
+            <HealthEventListener />
             {view === "project-list" && <ProjectTable />}
             {view === "project-detail" && <ProjectDetailView />}
           </>
