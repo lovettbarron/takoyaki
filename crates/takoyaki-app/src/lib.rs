@@ -33,6 +33,7 @@ pub fn run() {
         commands::device::get_device_status,
         commands::device::confirm_device,
         commands::device::dismiss_device,
+        commands::health::run_health_check,
     ]);
 
     #[cfg(debug_assertions)]
