@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-04-30T06:00:30.232Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-04-30T06:05:10.777Z"
 last_activity: 2026-04-30 -- Phase --phase execution started
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 13
-  completed_plans: 10
-  percent: 77
+  completed_plans: 11
+  percent: 85
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 1 of --name
 Status: Executing Phase --phase
 Last activity: 2026-04-30 -- Phase --phase execution started
 
-Progress: [████████░░] 77%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [████████░░] 77%
 | Phase 01-foundation P07 | 3 | 3 tasks | 12 files |
 | Phase 02-read-only-browser P01 | 4 | 2 tasks | 7 files |
 | Phase 02-read-only-browser P02 | 8 | 2 tasks | 6 files |
+| Phase 02-read-only-browser P03 | 3 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,8 @@ Recent decisions affecting current work:
 - Plan 02-02: aifc 0.7.0 uses reader.info() (AifcReadInfo), not .comm() — RESEARCH.md pattern had wrong API
 - Plan 02-02: resolve_ot_path uses canonicalize() traversal prevention (T-02-05) — returns Option<PathBuf>, None maps to HealthIssue::Error
 - Plan 02-02: ISO 8601 timestamp via std::time::SystemTime without chrono dependency — consistent with Plan 01 approach
+- shadcn Select onValueChange signature is (string | null) — handlers treat null as any to clear filter
+- Client-side sort in ProjectTable avoids extra IPC round-trips for non-default sort columns
 
 ### Pending Todos
 
@@ -119,8 +122,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-30T06:00:27.467Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-04-30T06:05:10.773Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
 
 **Planned Phase:** 02 (Read-Only Browser) — 6 plans — 2026-04-30T04:29:02.284Z
