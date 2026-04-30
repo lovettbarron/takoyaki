@@ -54,11 +54,11 @@ Plans:
   6. User can search and filter projects by name, tempo, or date using the SQLite index
 **Plans:** 5 plans
 Plans:
-- [ ] 02-01-PLAN.md — Rust Tauri commands for project list, detail, banks, samples, and SQLite indexing
-- [ ] 02-02-PLAN.md — Rust health check engine with audio format validation and background event emission
-- [ ] 02-03-PLAN.md — Frontend TypeScript types, IPC wrappers, navigation store, and project list view
-- [ ] 02-04-PLAN.md — Frontend project detail view with bank grid, samples tab, and metadata header
-- [ ] 02-05-PLAN.md — Frontend health tab, event listener, and end-to-end visual verification
+- [x] 02-01-PLAN.md — Rust Tauri commands for project list, detail, banks, samples, and SQLite indexing
+- [x] 02-02-PLAN.md — Rust health check engine with audio format validation and background event emission
+- [x] 02-03-PLAN.md — Frontend TypeScript types, IPC wrappers, navigation store, and project list view
+- [x] 02-04-PLAN.md — Frontend project detail view with bank grid, samples tab, and metadata header
+- [x] 02-05-PLAN.md — Frontend health tab, event listener, and end-to-end visual verification
 **UI hint**: yes
 
 ### Phase 3: Write Path and Backup
