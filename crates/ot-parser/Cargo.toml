@@ -1,0 +1,9 @@
+[package]
+name = "ot-parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+binrw = "0.15"
+serde = { workspace = true }
+thiserror = { workspace = true }

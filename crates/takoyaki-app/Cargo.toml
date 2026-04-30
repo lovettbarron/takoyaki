@@ -1,0 +1,7 @@
+[package]
+name = "takoyaki-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ot-parser = { path = "../ot-parser" }
