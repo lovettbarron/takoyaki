@@ -8,7 +8,10 @@ pub mod health;
 pub use error::{AppError, Result};
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
+use tauri::Manager;
 use tauri_specta::collect_commands;
 
 /// The state of the connected OT device.
@@ -21,6 +24,7 @@ pub struct DeviceState {
 pub struct AppState {
     pub db: Mutex<db::Database>,
     pub device: Mutex<DeviceState>,
+    pub cancel_backup: Arc<AtomicBool>,
 }
 
 pub fn run() {
@@ -34,6 +38,11 @@ pub fn run() {
         commands::device::confirm_device,
         commands::device::dismiss_device,
         commands::health::run_health_check,
+        commands::backup::backup_project,
+        commands::backup::restore_snapshot,
+        commands::backup::compute_dry_run,
+        commands::backup::list_backups,
+        commands::backup::cancel_backup,
     ]);
 
     #[cfg(debug_assertions)]
@@ -50,11 +59,24 @@ pub fn run() {
             mount_point: None,
             confirmed: false,
         }),
+        cancel_backup: Arc::new(AtomicBool::new(false)),
     };
 
     tauri::Builder::default()
         .setup(|app| {
             device::start_polling(app.handle().clone());
+
+            // D-12: Clean up incomplete backups from prior interrupted sessions
+            let cleanup_state = app.state::<AppState>();
+            if let Ok(mut db) = cleanup_state.db.lock() {
+                if let Ok(incomplete_paths) = db::backups::cleanup_incomplete_backups(&mut db.conn) {
+                    for path in incomplete_paths {
+                        let _ = std::fs::remove_dir_all(&path);
+                        tracing::info!("Cleaned up incomplete backup: {}", path);
+                    }
+                }
+            }
+
             Ok(())
         })
         .manage(app_state)

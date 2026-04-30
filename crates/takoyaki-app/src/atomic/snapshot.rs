@@ -110,7 +110,7 @@ fn unix_timestamp_secs() -> u64 {
 }
 
 /// Compute the SHA-256 hex digest of a file.
-fn sha256_hex(path: &Path) -> Result<String, AppError> {
+pub fn sha256_hex(path: &Path) -> Result<String, AppError> {
     use std::io::Read;
     let mut file = std::fs::File::open(path)?;
     let mut hasher = Sha256::new();

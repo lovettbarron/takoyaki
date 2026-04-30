@@ -1,3 +1,4 @@
+pub mod backup;
 pub mod device;
 pub mod health;
 pub mod projects;
