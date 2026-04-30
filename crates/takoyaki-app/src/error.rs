@@ -21,6 +21,9 @@ pub enum AppError {
 
     #[error("Invalid path")]
     InvalidPath,
+
+    #[error("Operation cancelled: {0}")]
+    Cancelled(String),
 }
 
 impl From<std::io::Error> for AppError {

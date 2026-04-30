@@ -27,3 +27,4 @@ tokio = { version = "1", features = ["time"] }
 hound = "3.5.1"
 aifc = "0.7.0"
 infer = "0.19.0"
+walkdir = "2.5"

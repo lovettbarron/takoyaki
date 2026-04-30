@@ -1,3 +1,4 @@
+pub mod backups;
 pub mod projects;
 pub mod wallflower;
 
@@ -6,6 +7,7 @@ use std::path::{Path, PathBuf};
 use tracing::info;
 
 const MIGRATION_V1: &str = include_str!("../../../../migrations/V1__initial_schema.sql");
+const MIGRATION_V2: &str = include_str!("../../../../migrations/V2__backup_schema.sql");
 
 /// Open (or create) a Takoyaki database at the given path, running migrations as needed.
 pub fn open_database(path: &Path) -> rusqlite::Result<Connection> {
@@ -49,6 +51,12 @@ fn initialize(conn: &Connection) -> rusqlite::Result<()> {
         info!("Running V1 migration: initial schema");
         conn.execute_batch(MIGRATION_V1)?;
         conn.execute_batch("PRAGMA user_version = 1;")?;
+    }
+
+    if current_version < 2 {
+        info!("Running V2 migration: backup schema");
+        conn.execute_batch(MIGRATION_V2)?;
+        conn.execute_batch("PRAGMA user_version = 2;")?;
     }
 
     Ok(())
@@ -147,12 +155,12 @@ mod tests {
     }
 
     #[test]
-    fn test_user_version_is_1() {
+    fn test_user_version_is_2() {
         let conn = open_in_memory().unwrap();
         let version: i32 = conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .unwrap();
-        assert_eq!(version, 1, "PRAGMA user_version must be 1 after init");
+        assert_eq!(version, 2, "PRAGMA user_version must be 2 after V2 migration");
     }
 
     #[test]
