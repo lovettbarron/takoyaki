@@ -13,7 +13,7 @@ interface NavSection {
 const NAV_SECTIONS: NavSection[] = [
   { key: "projects", label: "Projects", icon: FolderOpen, available: true },
   { key: "samples", label: "Samples", icon: Music, available: false },
-  { key: "backups", label: "Backups", icon: Archive, available: false },
+  { key: "backups", label: "Backups", icon: Archive, available: true },
   { key: "settings", label: "Settings", icon: Settings, available: false },
 ];
 

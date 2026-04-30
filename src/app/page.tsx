@@ -18,7 +18,7 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState<ActiveSection>("projects");
   const { connected, mountPoint, confirmed, setConfirmed } = useDeviceStore();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const { view } = useNavigationStore();
+  const { view, navigateToBackups, navigateToList } = useNavigationStore();
 
   // Show confirmation dialog when device is detected but not yet confirmed (D-14)
   // Debounce: 500ms delay per UI-SPEC.md Interaction Contract
@@ -77,7 +77,14 @@ export default function Home() {
         {/* Navigation */}
         <SidebarNav
           activeSection={activeSection}
-          onSectionChange={(s) => setActiveSection(s as ActiveSection)}
+          onSectionChange={(s) => {
+            setActiveSection(s as ActiveSection);
+            if (s === "backups") {
+              navigateToBackups();
+            } else if (s === "projects") {
+              navigateToList();
+            }
+          }}
         />
         {/* Spacer pushes version to bottom */}
         <div className="flex-1" />
