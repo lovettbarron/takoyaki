@@ -133,7 +133,7 @@ Exceptions: 44px sidebar nav touch targets (inherited from Phase 1 WCAG 2.5.5). 
 Phase 1 and Phase 2 accent reservation lists apply. Phase 3 adds:
 - "Back Up" primary action button (default variant — accent fill)
 - Active/selected snapshot entry left border (4px) in the snapshot timeline
-- Focus ring on all interactive elements in the dry-run modal
+- Focus ring on all interactive elements app-wide (standard WCAG 2.4.7 visible focus requirement — this is a global accessibility pattern, not a decorative use of accent)
 
 Accent is NOT used for: dry-run "Added" indicator (use Added green), progress bar fill during backup (use accent — exception justified: progress is the primary operation feedback), "Modified" indicator (use Accent amber — but note this is the same hue; the context distinguishes it from the button accent use), restore confirmation [Apply] button (use Destructive for restore actions that overwrite current state — see Copywriting: Destructive Confirmation).
 
@@ -172,7 +172,7 @@ Accent is NOT used for: dry-run "Added" indicator (use Added green), progress ba
 | Scroll Area | shadcn `scroll-area` | Dry-run file list (potentially long), snapshot timeline list |
 | Snapshot timeline | custom | Reverse-chronological list of snapshots per project. Each row: timestamp + operation label + file count + total size + [Restore] button |
 | Snapshot detail panel | custom | File listing with change indicators. Appears inline below selected snapshot row or in a split panel |
-| Dry-run preview modal | shadcn `dialog` (extended) | Full-screen-blocking modal with operation summary + file change list + snapshot guarantee note + [Cancel] / [Apply] buttons |
+| Dry-run preview modal | shadcn `dialog` (extended) | Full-screen-blocking modal with operation summary + file change list + snapshot guarantee note + [Don't Apply] / [Apply] buttons |
 | Inline success banner | custom | Fixed top-of-view strip, auto-dismisses after 4 seconds. Shows checkmark + project name + file count + size + destination path |
 | Backup progress indicator | custom | Progress bar (shadcn `progress`, determinate) + Label "Backing up… {n} of {total} files" + file counter |
 | Restore progress indicator | custom | Same structure as backup progress — "Restoring… {n} of {total} files" |
@@ -192,6 +192,8 @@ Phase 3 builds within the permanent chrome from Phase 1. The 220px sidebar + fle
 
 The Backups section is accessible from the sidebar at all times — including when the OT is disconnected. It shows backup history for all projects that have ever been backed up.
 
+**Primary focal point:** The project group headers (e.g. "LIVESET_01") are the primary focal points on arrival. They are rendered at Heading weight (18px semibold) and separated by `border-t` dividers, creating clear anchors that draw the eye first. Within each group, the most recent snapshot row (topmost in the reverse-chronological list) is the secondary focal point because it answers the user's first question: "when did I last back this up?"
+
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │ Titlebar: Takoyaki + ○ No Device (or ● OT-CARD)             │
@@ -200,7 +202,7 @@ The Backups section is accessible from the sidebar at all times — including wh
 │ Sidebar      │  ─────────────────────────────────────────────│
 │              │  [Search backups…]                             │  ← Input, optional filter
 │ Projects     │                                                │
-│ Samples      │  LIVESET_01                                    │  ← project group header
+│ Samples      │  LIVESET_01                                    │  ← project group header (PRIMARY FOCAL POINT)
 │ Backups      │  2026-04-30 14:32  manual backup  42 files  128 MB  [Restore] │
 │ (active)     │  2026-04-28 09:15  manual backup  40 files  122 MB  [Restore] │
 │              │                                                │
@@ -212,7 +214,7 @@ The Backups section is accessible from the sidebar at all times — including wh
 ```
 
 - Section heading "BACKUPS": Label weight, `px-md pt-lg pb-sm`
-- Project group headers (project name): Heading weight, `px-md pt-lg pb-xs`, `border-t` top separator
+- Project group headers (project name): Heading weight (18px semibold), `px-md pt-lg pb-xs`, `border-t` top separator — these are the primary focal points
 - Snapshot timeline rows: height 48px (h-12), `px-md`, `border-b border-border`
 - Each row contains (left-to-right): timestamp (Body Iosevka, tabular nums, fixed width ~140px), operation label (Label, muted, flex-1), file count (Body, muted, 72px), size (Body, muted, 72px), [Restore] button (ghost button, text-xs)
 - [Restore] button: ghost variant, Label weight, "Restore" — right-aligned in row
@@ -234,7 +236,7 @@ The Backups section is accessible from the sidebar at all times — including wh
 │  Modified bank02.work                               2 KB         │
 │  ...                                                              │
 │                                                                   │
-│  [Cancel]                              [Restore This Snapshot]    │
+│  [Don't Apply]                         [Restore This Snapshot]    │
 │                                                                   │
 │  "A snapshot of the current state will be created before         │
 │   restoring."                                                     │
@@ -246,7 +248,7 @@ The Backups section is accessible from the sidebar at all times — including wh
 - File change list: shadcn `scroll-area`, max-height 240px (max-h-60), `divide-y divide-border`
 - File change row: height 32px (h-8), `px-md`. Left: Label in semantic color ("Added"/"Modified"/"Removed"/"Unchanged") fixed 80px. Center: Body filename, flex-1, truncated. Right: Body muted filesize, 72px.
 - Snapshot guarantee note: Prose (Inter), 12px, muted, `px-md py-sm`, `border-t`. Full text: "A snapshot of the current state will be created before restoring."
-- [Cancel]: ghost button, right of guarantee note area
+- [Don't Apply]: ghost button, right of guarantee note area
 - [Restore This Snapshot]: default button, BUT uses Destructive variant because restore overwrites current project state. Label: "Restore This Snapshot". Width: auto, right-aligned.
 
 *Wait — [Restore This Snapshot] triggers the dry-run preview modal before executing. The button color here should be default (accent), not destructive. Destructive is used on the [Apply] button inside the dry-run modal where the user makes the final irreversible commitment.*
@@ -297,7 +299,7 @@ The dry-run preview modal is **mandatory** for all destructive operations. It bl
 │  │ ...                                                 │   │
 │  └────────────────────────────────────────────────────┘   │
 │                                                            │
-│                           [Cancel]   [Back Up 42 files]   │
+│                   [Don't Apply]   [Back Up 42 files]       │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -311,7 +313,7 @@ The dry-run preview modal is **mandatory** for all destructive operations. It bl
 - File change rows: height 32px, Body Iosevka. Change label (80px, Label weight, semantic color) + filename (flex-1, truncated) + size (72px, muted, tabular nums)
 - Separator: `border-t` above button row
 - Button row: `flex justify-end gap-sm pt-md`
-- [Cancel]: ghost button, "Cancel"
+- [Don't Apply]: ghost button, label "Don't Apply"
 - [Apply]: For backup operations → default (accent) variant, label "Back Up {N} files". For restore operations → destructive variant, label "Restore Snapshot". Width: auto.
 
 **No "don't show again" checkbox. No skip option. This is intentional per CONTEXT.md D-09.**
@@ -329,7 +331,7 @@ While a backup or restore is running, the dry-run modal closes and the main cont
 │                                                            │
 │  This may take a moment for large sample collections.      │  ← Prose, muted
 │                                                            │
-│  [Cancel]                                                   │  ← ghost, bottom-left
+│  [Cancel Backup]                                            │  ← ghost, bottom-left (backup)
 ```
 
 - Heading: Heading weight, Lucide `Archive` icon (16px) left of text
@@ -337,7 +339,8 @@ While a backup or restore is running, the dry-run modal closes and the main cont
 - File counter: Label weight, muted, right-aligned inline with progress bar: "12 of 42 files"
 - Current filename: Body Iosevka, muted, `pt-xs`, truncated
 - Prose note: Inter 14px, muted, `pt-sm`
-- [Cancel]: ghost button, bottom-left, triggers abort with confirmation: "Cancel the backup? No files have been written yet." / "Cancel the restore? The project is unchanged." depending on operation state.
+- Cancel button during backup: ghost button, bottom-left, label "Cancel Backup" — triggers abort with confirmation: "Cancel the backup? No files have been written yet."
+- Cancel button during restore: ghost button, bottom-left, label "Cancel Restore" — triggers abort with confirmation: "Cancel the restore? The project is unchanged."
 - On success: progress view dissolves, inline success banner appears at top of view
 
 ### Inline Success Banner
@@ -414,25 +417,25 @@ All Phase 2 project list states apply. Phase 3 adds:
 |-------------|---------|
 | Click "Backups" in sidebar | Navigate to Backups view — accessible even when OT disconnected |
 | Click [Back Up] on project row or in metadata header | Open dry-run preview modal for that project |
-| Click [Cancel] in dry-run modal | Dismiss modal, no operation. Return to prior view state. |
+| Click [Don't Apply] in dry-run modal | Dismiss modal, no operation. Return to prior view state. |
 | Click [Apply] / [Back Up N files] in dry-run modal | Close modal. Start backup. Show progress view in main content area. |
 | Click [Restore This Snapshot] in snapshot detail | Open dry-run preview modal for that restore operation |
 | Click [Apply] / [Restore Snapshot] in dry-run modal (destructive) | Close modal. Start restore. Show progress view. |
 | Click snapshot row in timeline | Expand snapshot detail panel inline below that row. Collapse previously expanded row if any. |
 | Click expanded snapshot row again | Collapse detail panel. Row returns to normal height. |
 | Click [Restore] button in timeline row (not detail panel) | Shortcut: opens dry-run modal directly for that snapshot without needing to expand detail first. |
-| Click [Cancel] during backup progress | Prompt: "Cancel the backup? No files have been written yet." [Keep Going] / [Cancel Backup]. |
-| Click [Cancel] during restore progress | Prompt: "Cancel the restore? The project is unchanged." [Keep Going] / [Cancel Restore]. |
+| Click [Cancel Backup] during backup progress | Prompt: "Cancel the backup? No files have been written yet." [Keep Going] / [Cancel Backup]. |
+| Click [Cancel Restore] during restore progress | Prompt: "Cancel the restore? The project is unchanged." [Keep Going] / [Cancel Restore]. |
 | Backup completes successfully | Progress view dissolves. Inline success banner appears for 4 seconds. Backups timeline updates to include new entry. |
 | Restore completes successfully | Progress view dissolves. Success banner: "✓ Restored…". Backups timeline updated with pre-restore snapshot entry. |
 | Backup fails (mid-operation) | Progress view shows error state. Banner: "Backup incomplete…" Warning amber variant. |
 | Restore aborted by disconnect | Banner: "Restore aborted. LIVESET_01 is unchanged." Amber variant. |
 | Click [✕] on success banner | Dismiss immediately. |
 | Banner auto-dismiss (4s) | Slide-out-top animation. No user action required. |
-| Keyboard Esc in dry-run modal | Same as clicking [Cancel] — dismiss modal, no operation. |
+| Keyboard Esc in dry-run modal | Same as clicking [Don't Apply] — dismiss modal, no operation. |
 | Keyboard Enter in dry-run modal | No action — Enter does NOT trigger [Apply]. Prevents accidental confirmation. User must click [Apply] explicitly. |
-| Focus within dry-run modal | Focus trapped inside modal. Tab cycles: Cancel → Apply → dismiss (✕) → file list (read-only) |
-| Keyboard focus | Visible accent-color focus ring on all interactive elements: snapshot rows, [Restore] buttons, timeline rows |
+| Focus within dry-run modal | Focus trapped inside modal. Tab cycles: Don't Apply → Apply → dismiss (✕) → file list (read-only) |
+| Keyboard focus | Visible accent-color focus ring on all interactive elements app-wide (WCAG 2.4.7): snapshot rows, [Restore] buttons, timeline rows, all buttons |
 | Tab key navigation | Sidebar → content area → snapshot rows (arrow keys within timeline) → detail panel → [Restore This Snapshot] → modal |
 
 *Sources: CONTEXT.md D-08 (modal blocks interaction), D-09 (mandatory dry-run, no skip), D-10 (snapshot guarantee line), D-11 (pre-restore snapshot), D-12 (interrupted operation states), D-13 (success banner auto-dismiss); Claude's Discretion (Esc/Enter behavior, focus trap, keyboard navigation)*
@@ -450,7 +453,7 @@ All Phase 2 project list states apply. Phase 3 adds:
 | Operation summary: backup | "{N} files will be copied to:" |
 | Operation summary: restore | "{N} files will be restored from:" |
 | Snapshot guarantee line | "A snapshot of the current state will be created before applying." |
-| [Cancel] button | "Cancel" |
+| [Don't Apply] button | "Don't Apply" |
 | [Apply] button: backup | "Back Up {N} files" |
 | [Apply] button: restore | "Restore Snapshot" |
 | File change label: added | "Added" |
@@ -495,7 +498,8 @@ All Phase 2 project list states apply. Phase 3 adds:
 | File counter | "{n} of {total} files" |
 | Prose note (backup) | "This may take a moment for large sample collections." |
 | Prose note (restore) | "Do not disconnect your Octatrack until this completes." |
-| [Cancel] during backup | "Cancel" |
+| [Cancel Backup] button | "Cancel Backup" |
+| [Cancel Restore] button | "Cancel Restore" |
 | Cancel confirmation: backup | "Cancel the backup? No files have been written yet." |
 | Cancel confirmation: restore | "Cancel the restore? The project is unchanged." |
 | Cancel confirmation: [Keep Going] | "Keep Going" |
@@ -523,6 +527,7 @@ All Phase 1 and Phase 2 tone rules apply. Phase 3 adds:
 - File sizes: always include unit. "128 MB", not "128". "842 KB", not "0.82 MB".
 - Timestamps in timeline: "2026-04-30 14:32" — no relative time, no "ago" language.
 - Operation labels in timeline: lowercase ("manual backup", not "Manual Backup").
+- Cancel-class actions in buttons are always operation-specific: "Don't Apply" (modal dismissal, no operation started), "Cancel Backup" (abort running backup), "Cancel Restore" (abort running restore). The generic label "Cancel" is not used anywhere in Phase 3.
 
 *Sources: CONTEXT.md D-08 (modal copy), D-09 (no skip), D-10 (snapshot guarantee line verbatim), D-12 (interrupted copy), D-13 (success banner content); Claude's Discretion (all exact copy, cancel confirmation copy, tone rules)*
 
