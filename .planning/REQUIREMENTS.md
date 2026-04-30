@@ -57,7 +57,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **FNDN-03**: Parser uses correct indexing (1-indexed for project files, 0-indexed for bank/marker files) with Rust newtypes preventing mismatch
 - [ ] **FNDN-04**: Staging directory for atomic writes lives on the same filesystem as the CF card volume
 - [ ] **FNDN-05**: All write completions are gated on fsync + directory sync to protect against hot-unplug data loss
-- [ ] **FNDN-06**: Tauri v2 desktop app with Rust backend and React/Next.js frontend, consistent with Wallflower architecture
+- [x] **FNDN-06
+**: Tauri v2 desktop app with Rust backend and React/Next.js frontend, consistent with Wallflower architecture
 - [ ] **FNDN-07**: SQLite database for Takoyaki's own metadata (backup history, project index, snapshot records)
 - [ ] **FNDN-08**: Read-only SQLite connection to Wallflower database with driver-level write protection
 

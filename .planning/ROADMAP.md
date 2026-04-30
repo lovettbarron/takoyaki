@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. The SQLite database initializes with schema for backup history, project index, and snapshot records
 **Plans:** 7 plans
 Plans:
-- [ ] 01-01-PLAN.md — Cargo workspace and Tauri app crate scaffold
+- [x] 01-01-PLAN.md — Cargo workspace and Tauri app crate scaffold
 - [ ] 01-02-PLAN.md — Next.js frontend scaffold with shadcn and warm dark theme
 - [ ] 01-03-PLAN.md — .ot file parser with round-trip tests and indexing newtypes
 - [ ] 01-04-PLAN.md — Remaining OT file type parsers (.work, bank, markers, arrangement)
@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/7 | Planning complete | - |
+| 1. Foundation | 1/7 | Executing | - |
 | 2. Read-Only Browser | 0/5 | Planning complete | - |
 | 3. Write Path and Backup | 0/? | Not started | - |
 | 4. Advanced Management | 0/? | Not started | - |
