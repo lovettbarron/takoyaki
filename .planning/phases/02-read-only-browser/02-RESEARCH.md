@@ -859,7 +859,7 @@ export function useProjectList() {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED — guarded by Plan 01 assumption guards; definitive validation pending Phase 1 OT binary fixtures)
 
 1. **OT tempo encoding**
    - What we know: OT BPM range is 30–300 BPM. If stored as integer, integer × 10 gives range 300–3000, which requires u16. ot-tools-io parses a u16 tempo field.
