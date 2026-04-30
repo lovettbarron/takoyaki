@@ -71,7 +71,13 @@ Plans:
   3. User can restore any snapshot to roll a project back to exactly that prior state
   4. User can trigger dry-run mode on any destructive operation and see exactly which files will change and how before committing
   5. A backup or restore that is interrupted mid-operation leaves the project in its pre-operation state (all-or-nothing guarantee)
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 03-01-PLAN.md — Rust backend: V2 migration, db::backups module, and five Tauri backup commands
+- [ ] 03-02-PLAN.md — Frontend foundation: TypeScript types, backup store, IPC wrappers, sidebar activation
+- [ ] 03-03-PLAN.md — Dry-run modal, backup progress view, success banner, and MetadataHeader Back Up button
+- [ ] 03-04-PLAN.md — Backups view with timeline, snapshot detail panel, and restore workflow
+**UI hint**: yes
 
 ### Phase 4: Advanced Management
 **Goal**: Users can perform the full range of project management operations — duplicate, rename, export, copy banks across projects — with the same safety guarantees as Phase 3.
@@ -105,6 +111,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Foundation | 6/7 | Executing | - |
 | 2. Read-Only Browser | 0/5 | Planning complete | - |
-| 3. Write Path and Backup | 0/? | Not started | - |
+| 3. Write Path and Backup | 0/4 | Planning complete | - |
 | 4. Advanced Management | 0/? | Not started | - |
 | 5. Sample Assignment and Wallflower | 0/? | Not started | - |
