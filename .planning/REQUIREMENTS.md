@@ -32,8 +32,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **SAFE-01**: User can back up any OT project to a Mac-side location (full directory tree copy)
 - [ ] **SAFE-02**: User can verify backup integrity via checksum comparison between source and backup
-- [ ] **SAFE-03**: System automatically creates a snapshot of all affected files before any write operation
-- [ ] **SAFE-04**: All write operations use atomic staged writes (write to staging, verify, then rename — all-or-nothing)
+- [x] **SAFE-03
+**: System automatically creates a snapshot of all affected files before any write operation
+- [x] **SAFE-04
+**: All write operations use atomic staged writes (write to staging, verify, then rename — all-or-nothing)
 - [ ] **SAFE-05**: User can browse snapshot history chronologically with timestamps and operation labels
 - [ ] **SAFE-06**: User can restore any previous snapshot to roll back a project to a prior state
 - [ ] **SAFE-07**: User can preview exactly what files will change before any destructive operation is committed (dry-run mode)
@@ -66,12 +68,16 @@ Requirements for initial release. Each maps to roadmap phases.
 **: Parser preserves all unknown/reserved bytes verbatim during round-trip (parse → serialize → parse produces identical output)
 - [x] **FNDN-03
 **: Parser uses correct indexing (1-indexed for project files, 0-indexed for bank/marker files) with Rust newtypes preventing mismatch
-- [ ] **FNDN-04**: Staging directory for atomic writes lives on the same filesystem as the CF card volume
-- [ ] **FNDN-05**: All write completions are gated on fsync + directory sync to protect against hot-unplug data loss
+- [x] **FNDN-04
+**: Staging directory for atomic writes lives on the same filesystem as the CF card volume
+- [x] **FNDN-05
+**: All write completions are gated on fsync + directory sync to protect against hot-unplug data loss
 - [x] **FNDN-06
 **: Tauri v2 desktop app with Rust backend and React/Next.js frontend, consistent with Wallflower architecture
-- [ ] **FNDN-07**: SQLite database for Takoyaki's own metadata (backup history, project index, snapshot records)
-- [ ] **FNDN-08**: Read-only SQLite connection to Wallflower database with driver-level write protection
+- [x] **FNDN-07
+**: SQLite database for Takoyaki's own metadata (backup history, project index, snapshot records)
+- [x] **FNDN-08
+**: Read-only SQLite connection to Wallflower database with driver-level write protection
 
 ## v2 Requirements
 
