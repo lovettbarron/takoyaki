@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-04-30T19:35:47.744Z"
+stopped_at: "Completed 03-04: BackupsView, BackupTimeline, SnapshotRow, SnapshotDetailPanel, page.tsx wiring"
+last_updated: "2026-04-30T19:37:39.151Z"
 last_activity: 2026-04-30 -- Phase --phase execution started
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 17
-  completed_plans: 16
-  percent: 94
+  completed_plans: 17
+  percent: 100
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 1 of --name
 Status: Executing Phase --phase
 Last activity: 2026-04-30 -- Phase --phase execution started
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [█████████░] 94%
 | Phase 03-write-path-and-backup P01 | 395 | 3 tasks | 13 files |
 | Phase 03-write-path-and-backup P02 | 3 | 2 tasks | 7 files |
 | Phase 03-write-path-and-backup P03 | 246 | 2 tasks | 6 files |
+| Phase 03-write-path-and-backup P04 | 3 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Recent decisions affecting current work:
 - Plan 03-03: onBackUp in page.tsx reads selectedProjectId from navStore (aliased navProjectId) and passes a captured () => void — avoids threading projectId/projectName as params through the prop chain
 - Plan 03-03: BackupProgressView cancel uses intermediate confirm dialog with Keep Going / Cancel Backup|Restore buttons — prevents accidental cancellation per UI-SPEC
 - Plan 03-03: page.tsx passes empty string for projectName in handleBackUpClick — Rust backend resolves actual name from DB; UI uses activeProjectName from store post-startOperation
+- Plan 03-04: SnapshotDetailPanel placed inside BackupTimeline loop — timeline owns snapshot rendering context
+- Plan 03-04: useDeviceStore().connected gates manifest fetch and restore (not .confirmed) — restore needs active mount not confirmation ceremony
 
 ### Pending Todos
 
@@ -142,8 +145,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 4 context gathered
-Resume file: --resume-file
+Last session: 2026-04-30T19:37:39.147Z
+Stopped at: Completed 03-04: BackupsView, BackupTimeline, SnapshotRow, SnapshotDetailPanel, page.tsx wiring
+Resume file: None
 
 **Planned Phase:** 3 (Write Path and Backup) — 4 plans — 2026-04-30T19:08:39.242Z
