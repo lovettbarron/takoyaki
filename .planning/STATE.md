@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-06-PLAN.md
-last_updated: "2026-04-30T05:25:17.376Z"
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-04-30T05:37:20.101Z"
 last_activity: 2026-04-30 -- Phase --phase execution started
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 13
-  completed_plans: 6
-  percent: 46
+  completed_plans: 7
+  percent: 54
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 1 of --name
 Status: Executing Phase --phase
 Last activity: 2026-04-30 -- Phase --phase execution started
 
-Progress: [█████░░░░░] 46%
+Progress: [█████░░░░░] 54%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [█████░░░░░] 46%
 | Phase 02-read-only-browser P00 | 2 | 2 tasks | 8 files |
 | Phase 01-foundation P05 | 4 | 2 tasks | 6 files |
 | Phase 01-foundation P06 | 15 | 3 tasks | 6 files |
+| Phase 01-foundation P04 | 9min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,9 @@ Recent decisions affecting current work:
 - Plan 01-06: TauriEventListener uses dynamic import + try/catch so Next.js dev server does not crash when Tauri API is unavailable outside webview context
 - Plan 01-06: Sidebar nav uses custom button elements (not shadcn Sidebar) to enforce 44px WCAG 2.5.5 touch targets and UI-SPEC Disabled State Contract without fighting shadcn defaults
 - Plan 01-06: Device status badge shows volume name from mount path tail (split('/').pop()) — minimal and informative, no full path disclosure
+- Plan 01-04: project.work/.strd is text key=value format (not binary) — stored as opaque raw bytes for round-trip fidelity
+- Plan 01-04: All OT binary file types share FORM+DPS1+TYPE 21-byte header pattern (BANK/SAMP/ARRA type codes)
+- Plan 01-04: Checksum stored verbatim (not recalculated) — non-trivial algorithm requires default-instance comparison; verbatim guarantees round-trip
 
 ### Pending Todos
 
@@ -103,8 +107,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-30T05:25:17.372Z
-Stopped at: Completed 01-06-PLAN.md
+Last session: 2026-04-30T05:37:20.097Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None
 
 **Planned Phase:** 02 (Read-Only Browser) — 6 plans — 2026-04-30T04:29:02.284Z
