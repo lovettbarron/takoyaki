@@ -686,7 +686,7 @@ useEffect(() => {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Incomplete backup cleanup on launch**
    - What we know: D-12 says partial backup is deleted on next launch
