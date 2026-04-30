@@ -10,16 +10,23 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Browsing & Visualization
 
 - [ ] **BROW-01**: User can see when their Octatrack is connected in USB disk mode via automatic volume detection
-- [ ] **BROW-02**: User can list all OT projects on a mounted card with metadata (name, bank count, tempo, last modified)
-- [ ] **BROW-03**: User can view which banks and patterns are populated within a project
-- [ ] **BROW-04**: User can view all Flex and Static sample slots (128 each) with assigned file paths
-- [ ] **BROW-05**: User can view project-level metadata including tempo, bank names, part names, and active machine types per track
+- [x] **BROW-02
+**: User can list all OT projects on a mounted card with metadata (name, bank count, tempo, last modified)
+- [x] **BROW-03
+**: User can view which banks and patterns are populated within a project
+- [x] **BROW-04
+**: User can view all Flex and Static sample slots (128 each) with assigned file paths
+- [x] **BROW-05
+**: User can view project-level metadata including tempo, bank names, part names, and active machine types per track
 
 ### Detection & Validation
 
-- [ ] **DETC-01**: User can detect missing or broken sample references across all slots in a project
-- [ ] **DETC-02**: User can validate audio file format compatibility (flag non-44.1kHz, wrong bit depth, non-WAV/AIFF samples)
-- [ ] **DETC-03**: User can detect unused samples (assigned to slots but never triggered in any pattern)
+- [x] **DETC-01
+**: User can detect missing or broken sample references across all slots in a project
+- [x] **DETC-02
+**: User can validate audio file format compatibility (flag non-44.1kHz, wrong bit depth, non-WAV/AIFF samples)
+- [x] **DETC-03
+**: User can detect unused samples (assigned to slots but never triggered in any pattern)
 
 ### Backup & Data Safety
 
@@ -36,7 +43,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **MGMT-01**: User can duplicate/copy an OT project with automatic sample path remapping
 - [ ] **MGMT-02**: User can rename an OT project on disk with internal name field updated
 - [ ] **MGMT-03**: User can export a project as a self-contained zip with all referenced samples collected
-- [ ] **MGMT-04**: User can search and filter projects by name, tempo, or date via indexed metadata
+- [x] **MGMT-04
+**: User can search and filter projects by name, tempo, or date via indexed metadata
 
 ### Sample Management
 
