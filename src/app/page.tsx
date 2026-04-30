@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useDeviceStore } from "@/lib/stores/device";
+import { useNavigationStore } from "@/lib/stores/navigation";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { DeviceStatusBadge } from "@/components/device-status-badge";
 import { VolumeConfirmDialog } from "@/components/volume-confirm-dialog";
+import { ProjectTable } from "@/components/projects/ProjectTable";
 import { Separator } from "@/components/ui/separator";
 import { confirmDevice, dismissDevice } from "@/lib/tauri";
 
@@ -14,6 +16,7 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState<ActiveSection>("projects");
   const { connected, mountPoint, confirmed, setConfirmed } = useDeviceStore();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const { view } = useNavigationStore();
 
   // Show confirmation dialog when device is detected but not yet confirmed (D-14)
   // Debounce: 500ms delay per UI-SPEC.md Interaction Contract
@@ -82,26 +85,36 @@ export default function Home() {
       </aside>
 
       {/* Content area */}
-      <main className="flex-1 flex items-center justify-center overflow-y-auto p-6">
+      <main className="flex-1 flex flex-col overflow-hidden">
         {!connected || !confirmed ? (
-          <div className="text-center max-w-sm">
-            <h2 className="text-lg font-semibold font-mono text-foreground mb-2">
-              No Device Connected
-            </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed" style={{ fontFamily: "var(--font-sans)" }}>
-              Connect your Octatrack in USB disk mode to get started.
-              The app will detect it automatically.
-            </p>
+          <div className="flex flex-1 items-center justify-center p-6">
+            <div className="text-center max-w-sm">
+              <h2 className="text-lg font-semibold font-mono text-foreground mb-2">
+                No Device Connected
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed" style={{ fontFamily: "var(--font-sans)" }}>
+                Connect your Octatrack in USB disk mode to get started.
+                The app will detect it automatically.
+              </p>
+            </div>
           </div>
         ) : (
-          <div className="text-center max-w-sm">
-            <h2 className="text-lg font-semibold font-mono text-foreground mb-2">
-              Projects
-            </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed" style={{ fontFamily: "var(--font-sans)" }}>
-              Project browser will be available in Phase 2.
-            </p>
-          </div>
+          <>
+            {/* HealthEventListener will be mounted here by Plan 05 */}
+            {view === "project-list" && <ProjectTable />}
+            {view === "project-detail" && (
+              <div className="flex flex-1 items-center justify-center p-6">
+                <div className="text-center max-w-sm">
+                  <h2 className="text-lg font-semibold font-mono text-foreground mb-2">
+                    Project Detail
+                  </h2>
+                  <p className="text-sm text-muted-foreground" style={{ fontFamily: "var(--font-sans)" }}>
+                    Project detail view — coming in Plan 04.
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 
