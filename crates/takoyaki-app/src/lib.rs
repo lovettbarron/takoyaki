@@ -1,4 +1,4 @@
-mod atomic;
+pub mod atomic;
 mod commands;
 pub mod db;
 pub mod device;
