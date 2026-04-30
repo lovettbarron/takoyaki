@@ -1,0 +1,37 @@
+{
+  "productName": "Takoyaki",
+  "version": "0.1.0",
+  "identifier": "com.takoyaki.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../../out"
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app"],
+    "macOS": {
+      "signingIdentity": null,
+      "minimumSystemVersion": "13.0"
+    }
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Takoyaki",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/**"]
+      }
+    }
+  }
+}
