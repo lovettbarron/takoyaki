@@ -38,7 +38,7 @@ Plans:
 - [x] 01-04-PLAN.md — Remaining OT file type parsers (.work, bank, markers, arrangement)
 - [x] 01-05-PLAN.md — SQLite database, atomic write engine, and snapshot infrastructure
 - [x] 01-06-PLAN.md — Frontend UI shell with sidebar navigation and disconnected state
-- [ ] 01-07-PLAN.md — Volume detection backend and frontend integration with confirmation dialog
+- [x] 01-07-PLAN.md — Volume detection backend and frontend integration with confirmation dialog
 **UI hint**: yes
 
 ### Phase 2: Read-Only Browser
