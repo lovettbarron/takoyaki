@@ -7,6 +7,7 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { DeviceStatusBadge } from "@/components/device-status-badge";
 import { VolumeConfirmDialog } from "@/components/volume-confirm-dialog";
 import { ProjectTable } from "@/components/projects/ProjectTable";
+import { ProjectDetailView } from "@/components/project-detail/ProjectDetailView";
 import { Separator } from "@/components/ui/separator";
 import { confirmDevice, dismissDevice } from "@/lib/tauri";
 
@@ -102,18 +103,7 @@ export default function Home() {
           <>
             {/* HealthEventListener will be mounted here by Plan 05 */}
             {view === "project-list" && <ProjectTable />}
-            {view === "project-detail" && (
-              <div className="flex flex-1 items-center justify-center p-6">
-                <div className="text-center max-w-sm">
-                  <h2 className="text-lg font-semibold font-mono text-foreground mb-2">
-                    Project Detail
-                  </h2>
-                  <p className="text-sm text-muted-foreground" style={{ fontFamily: "var(--font-sans)" }}>
-                    Project detail view — coming in Plan 04.
-                  </p>
-                </div>
-              </div>
-            )}
+            {view === "project-detail" && <ProjectDetailView />}
           </>
         )}
       </main>
