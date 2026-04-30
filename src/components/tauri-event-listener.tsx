@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useDeviceStore } from "@/lib/stores/device";
+import { toast } from "sonner";
 
 export function TauriEventListener() {
   const { setConnected, reset } = useDeviceStore();
@@ -18,8 +19,12 @@ export function TauriEventListener() {
           (event) => {
             if (event.payload) {
               setConnected(true, event.payload);
+              // Show volume name (last path component), not full path
+              const volumeName = event.payload.split("/").pop() ?? event.payload;
+              toast("Octatrack connected at " + volumeName + ".");
             } else {
               reset();
+              toast("Octatrack disconnected.");
             }
           }
         );

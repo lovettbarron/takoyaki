@@ -1,16 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDeviceStore } from "@/lib/stores/device";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { DeviceStatusBadge } from "@/components/device-status-badge";
+import { VolumeConfirmDialog } from "@/components/volume-confirm-dialog";
 import { Separator } from "@/components/ui/separator";
+import { confirmDevice, dismissDevice } from "@/lib/tauri";
 
 type ActiveSection = "projects" | "samples" | "backups" | "settings";
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState<ActiveSection>("projects");
-  const { connected } = useDeviceStore();
+  const { connected, mountPoint, confirmed, setConfirmed } = useDeviceStore();
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Show confirmation dialog when device is detected but not yet confirmed (D-14)
+  // Debounce: 500ms delay per UI-SPEC.md Interaction Contract
+  useEffect(() => {
+    if (connected && !confirmed && mountPoint) {
+      const timer = setTimeout(() => {
+        setShowConfirmDialog(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else if (!connected) {
+      setShowConfirmDialog(false);
+    }
+  }, [connected, confirmed, mountPoint]);
+
+  // Auto-navigate to Projects on confirm (D-11)
+  useEffect(() => {
+    if (confirmed) {
+      setActiveSection("projects");
+    }
+  }, [confirmed]);
+
+  const handleConfirm = async () => {
+    if (mountPoint) {
+      try {
+        await confirmDevice(mountPoint);
+        setConfirmed(true);
+      } catch {
+        // If invoke fails (not in Tauri), just set local state
+        setConfirmed(true);
+      }
+    }
+    setShowConfirmDialog(false);
+  };
+
+  const handleDismiss = async () => {
+    try {
+      await dismissDevice();
+    } catch {
+      // Not in Tauri context
+    }
+    setShowConfirmDialog(false);
+  };
 
   return (
     <div className="flex h-screen bg-background">
@@ -38,7 +83,7 @@ export default function Home() {
 
       {/* Content area */}
       <main className="flex-1 flex items-center justify-center overflow-y-auto p-6">
-        {!connected ? (
+        {!connected || !confirmed ? (
           <div className="text-center max-w-sm">
             <h2 className="text-lg font-semibold font-mono text-foreground mb-2">
               No Device Connected
@@ -59,6 +104,14 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Volume confirmation dialog */}
+      <VolumeConfirmDialog
+        open={showConfirmDialog}
+        mountPoint={mountPoint || ""}
+        onConfirm={handleConfirm}
+        onDismiss={handleDismiss}
+      />
     </div>
   );
 }
