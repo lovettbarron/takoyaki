@@ -9,7 +9,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Browsing & Visualization
 
-- [ ] **BROW-01**: User can see when their Octatrack is connected in USB disk mode via automatic volume detection
+- [x] **BROW-01
+**: User can see when their Octatrack is connected in USB disk mode via automatic volume detection
 - [x] **BROW-02
 **: User can list all OT projects on a mounted card with metadata (name, bank count, tempo, last modified)
 - [x] **BROW-03
