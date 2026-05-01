@@ -9,7 +9,7 @@
 //! - SAFE-03: Pre-operation snapshot created before any destructive write.
 
 use crate::atomic::snapshot::SnapshotEngine;
-use crate::commands::backup::{ChangeType, FileChangeEntry, FileChangeManifest};
+use crate::commands::backup::{ChangeType, ConflictDetail, FileChangeEntry, FileChangeManifest};
 use crate::db;
 use crate::error::AppError;
 use crate::management;
@@ -189,6 +189,7 @@ pub async fn compute_management_dry_run(
                     snapshot_prefix, project_name, dest_name
                 ),
                 project_name,
+                conflict_details: Vec::new(),
             })
         }
 
@@ -220,6 +221,7 @@ pub async fn compute_management_dry_run(
                     snapshot_prefix, project_name, dest_name
                 ),
                 project_name,
+                conflict_details: Vec::new(),
             })
         }
 
@@ -285,6 +287,7 @@ pub async fn compute_management_dry_run(
                 destination_path: export_dest.to_string_lossy().into_owned(),
                 operation_label: format!("{}Export {}", snapshot_prefix, project_name),
                 project_name,
+                conflict_details: Vec::new(),
             })
         }
 
@@ -352,6 +355,14 @@ pub async fn compute_management_dry_run(
             let total_added = analysis.auto_copy.len();
             let total_unchanged = analysis.skip.len();
 
+            let conflict_details: Vec<ConflictDetail> = analysis.conflicts.iter().map(|c| {
+                ConflictDetail {
+                    filename: c.filename.clone(),
+                    source_hash: c.source_hash.clone(),
+                    target_hash: c.target_hash.clone(),
+                }
+            }).collect();
+
             Ok(FileChangeManifest {
                 entries,
                 total_added,
@@ -365,6 +376,7 @@ pub async fn compute_management_dry_run(
                     snapshot_prefix, project_name
                 ),
                 project_name,
+                conflict_details,
             })
         }
 
