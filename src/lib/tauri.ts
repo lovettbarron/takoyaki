@@ -8,6 +8,7 @@ import type {
   BackupSummary,
   FileChangeManifest,
   BackupEvent,
+  ManagementEvent,
 } from "./types";
 
 export interface DeviceStatus {
@@ -96,4 +97,61 @@ export async function restoreSnapshot(
 
 export async function cancelBackup(): Promise<void> {
   return invoke("cancel_backup");
+}
+
+// Phase 4: Management IPC wrappers
+export async function computeManagementDryRun(
+  projectId: string,
+  operation: string,
+  targetProjectId?: string,
+  bankIndex?: number,
+  newName?: string,
+): Promise<FileChangeManifest> {
+  return invoke("compute_management_dry_run", {
+    projectId,
+    operation,
+    targetProjectId: targetProjectId ?? null,
+    bankIndex: bankIndex ?? null,
+    newName: newName ?? null,
+  });
+}
+
+export async function duplicateProject(
+  projectId: string,
+  newName: string,
+  onEvent: Channel<ManagementEvent>,
+): Promise<void> {
+  return invoke("duplicate_project", { projectId, newName, onEvent });
+}
+
+export async function renameProject(
+  projectId: string,
+  newName: string,
+): Promise<void> {
+  return invoke("rename_project", { projectId, newName });
+}
+
+export async function exportProject(
+  projectId: string,
+  onEvent: Channel<ManagementEvent>,
+): Promise<void> {
+  return invoke("export_project", { projectId, onEvent });
+}
+
+export async function copyBank(
+  sourceProjectId: string,
+  sourceBankIndex: number,
+  targetProjectId: string,
+  targetBankIndex: number,
+  conflictResolutions: Record<string, string>,
+  onEvent: Channel<ManagementEvent>,
+): Promise<void> {
+  return invoke("copy_bank", {
+    sourceProjectId,
+    sourceBankIndex,
+    targetProjectId,
+    targetBankIndex,
+    conflictResolutions,
+    onEvent,
+  });
 }

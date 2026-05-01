@@ -101,7 +101,7 @@ export interface BackupFileRecord {
   change_type: string;
 }
 
-export type ChangeType = "Added" | "Modified" | "Removed" | "Unchanged";
+export type ChangeType = "Added" | "Modified" | "Removed" | "Unchanged" | "Conflict";
 
 export interface FileChangeEntry {
   path: string;
@@ -128,3 +128,22 @@ export type BackupEvent =
   | { event: "progress"; data: { filesCopied: number; totalFiles: number; currentFile: string } }
   | { event: "complete"; data: { filesCopied: number; totalBytes: number; destination: string; checksumOk: boolean } }
   | { event: "failed"; data: { reason: string } };
+
+// Phase 4: Management types (MGMT-01, MGMT-02, MGMT-03, SMPL-02)
+
+export type ManagementOperation = "duplicate" | "rename" | "export" | "bank-copy";
+
+export type ManagementEvent =
+  | { event: "started"; data: { total_files: number; destination: string } }
+  | { event: "progress"; data: { files_processed: number; total_files: number; current_file: string } }
+  | { event: "complete"; data: { files_processed: number; total_bytes: number; destination: string } }
+  | { event: "failed"; data: { reason: string } };
+
+export type ConflictResolution = "keep-target" | "use-source" | "rename-incoming";
+
+export interface ConflictEntry {
+  filename: string;
+  source_hash: string;
+  target_hash: string;
+  resolution: ConflictResolution | null;
+}
