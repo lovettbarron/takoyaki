@@ -12,15 +12,16 @@ An Octatrack user can manage their projects and samples with complete confidence
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Browse OT project structure on Mac (samples, banks, parts, patterns) — Validated in Phase 2: Read-Only Browser
+- [x] Safe backup and versioning of OT projects (snapshot, revert, track evolution) — Validated in Phase 3: Write Path and Backup
+- [x] Three-layer safety model: auto-snapshot before writes, dry-run preview, atomic staged writes — Validated in Phase 3: Write Path and Backup
+- [x] Clean-room Rust parser for OT binary formats (.work, .strd, .ot, bank files, marker files) — Validated in Phase 1: Foundation
 
 ### Active
 
-- [ ] Safe backup and versioning of OT projects (snapshot, revert, track evolution)
-- [ ] Browse OT project structure on Mac (samples, banks, parts, patterns)
+- [ ] Assign samples to OT track slots from desktop UI
 - [ ] Assign samples to OT track slots from desktop UI
 - [ ] Move, copy, duplicate, and archive OT projects on the CF card
-- [ ] Three-layer safety model: auto-snapshot before writes, dry-run preview, atomic staged writes
 - [ ] Clean-room Rust parser for OT binary formats (.work, .strd, .ot, bank files, marker files)
 - [ ] USB mode support — read/write OT when mounted as USB disk
 - [ ] Optional Wallflower integration — read Wallflower SQLite DB for metadata search (key, BPM, tags)
@@ -77,6 +78,8 @@ An Octatrack user can manage their projects and samples with complete confidence
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
+
+Last updated: 2026-05-01 (Phase 3 complete — backup, restore, dry-run preview, snapshot history)
 
 **After each phase transition** (via `/gsd-transition`):
 1. Requirements invalidated? → Move to Out of Scope with reason
