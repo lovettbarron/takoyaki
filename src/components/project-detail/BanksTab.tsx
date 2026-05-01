@@ -6,9 +6,10 @@ import { BankGridCell } from "./BankGridCell";
 
 interface BanksTabProps {
   project: ProjectDetail;
+  onCopyBankToProject?: (bankIndex: number) => void;
 }
 
-export function BanksTab({ project }: BanksTabProps) {
+export function BanksTab({ project, onCopyBankToProject }: BanksTabProps) {
   const { selectedBankIndex, selectBank } = useNavigationStore();
 
   const banks = project.banks;
@@ -44,6 +45,9 @@ export function BanksTab({ project }: BanksTabProps) {
                           ? selectBank(null)
                           : selectBank(i)
                     : undefined
+                }
+                onCopyToProject={
+                  isPopulated ? () => onCopyBankToProject?.(i) : undefined
                 }
               />
             );
