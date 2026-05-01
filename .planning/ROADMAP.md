@@ -88,7 +88,14 @@ Plans:
   2. User can rename an OT project on disk and have the internal name field in the binary header updated to match
   3. User can export a project as a self-contained zip with all referenced audio samples collected inside
   4. User can copy a bank from one project to another with sample slots automatically remapped and conflicts surfaced for resolution
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+- [ ] 04-01-PLAN.md — Rust management module: project.work parser, OT name validation, rename, duplicate
+- [ ] 04-02-PLAN.md — Frontend foundation: TypeScript types, management store, IPC wrappers, context-menu install
+- [ ] 04-03-PLAN.md — Rust export-to-zip, bank copy with conflict detection, Tauri command registration
+- [ ] 04-04-PLAN.md — Frontend UI: MetadataHeader toolbar, inline rename, BankCopyPickerDialog, page.tsx wiring
+- [ ] 04-05-PLAN.md — End-to-end integration verification checkpoint
+**UI hint**: yes
 
 ### Phase 5: Sample Assignment and Wallflower
 **Goal**: Users can assign any desktop audio file to a specific Flex or Static sample slot with all affected OT binary files updated atomically, and optionally browse and deploy samples from the Wallflower library — with graceful degradation when Wallflower is not present.
@@ -112,5 +119,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Foundation | 6/7 | Executing | - |
 | 2. Read-Only Browser | 0/5 | Planning complete | - |
 | 3. Write Path and Backup | 0/4 | Planning complete | - |
-| 4. Advanced Management | 0/? | Not started | - |
+| 4. Advanced Management | 0/5 | Planning complete | - |
 | 5. Sample Assignment and Wallflower | 0/? | Not started | - |
