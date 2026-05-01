@@ -23,9 +23,13 @@ import { HealthTab } from "./HealthTab";
 
 interface ProjectDetailViewProps {
   onBackUp?: () => void;
+  onRename?: (newName: string) => void;
+  onDuplicate?: () => void;
+  onExport?: () => void;
+  onCopyBankToProject?: (bankIndex: number) => void;
 }
 
-export function ProjectDetailView({ onBackUp }: ProjectDetailViewProps = {}) {
+export function ProjectDetailView({ onBackUp, onRename, onDuplicate, onExport, onCopyBankToProject }: ProjectDetailViewProps = {}) {
   const {
     selectedProjectId,
     selectedBankIndex,
@@ -103,7 +107,13 @@ export function ProjectDetailView({ onBackUp }: ProjectDetailViewProps = {}) {
           <Skeleton className="h-4 w-64" />
         </div>
       ) : project ? (
-        <MetadataHeader project={project} onBackUp={onBackUp} />
+        <MetadataHeader
+          project={project}
+          onBackUp={onBackUp}
+          onRename={onRename}
+          onDuplicate={onDuplicate}
+          onExport={onExport}
+        />
       ) : null}
 
       {/* Tabs */}
@@ -151,7 +161,7 @@ export function ProjectDetailView({ onBackUp }: ProjectDetailViewProps = {}) {
               <Skeleton className="h-4 w-32" />
             </div>
           ) : project ? (
-            <BanksTab project={project} />
+            <BanksTab project={project} onCopyBankToProject={onCopyBankToProject} />
           ) : null}
         </TabsContent>
 

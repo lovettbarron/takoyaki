@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDeviceStore } from "@/lib/stores/device";
 import { useNavigationStore } from "@/lib/stores/navigation";
 import { useBackupStore } from "@/lib/stores/backup";
+import { useManagementStore } from "@/lib/stores/management";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { DeviceStatusBadge } from "@/components/device-status-badge";
 import { VolumeConfirmDialog } from "@/components/volume-confirm-dialog";
@@ -14,10 +15,23 @@ import { DryRunModal } from "@/components/backups/DryRunModal";
 import { BackupsView } from "@/components/backups/BackupsView";
 import { BackupProgressView } from "@/components/backup-progress/BackupProgressView";
 import { InlineSuccessBanner } from "@/components/backup-progress/InlineSuccessBanner";
+import { BankCopyPickerDialog } from "@/components/management/BankCopyPickerDialog";
 import { Separator } from "@/components/ui/separator";
-import { confirmDevice, dismissDevice, computeDryRun, backupProject, restoreSnapshot } from "@/lib/tauri";
+import {
+  confirmDevice,
+  dismissDevice,
+  computeDryRun,
+  backupProject,
+  restoreSnapshot,
+  computeManagementDryRun,
+  duplicateProject,
+  renameProject,
+  exportProject,
+  copyBank,
+  listProjects,
+} from "@/lib/tauri";
 import { Channel } from "@tauri-apps/api/core";
-import type { BackupEvent } from "@/lib/types";
+import type { BackupEvent, ManagementEvent, ProjectSummary } from "@/lib/types";
 
 type ActiveSection = "projects" | "samples" | "backups" | "settings";
 
@@ -42,6 +56,32 @@ export default function Home() {
     reset,
   } = useBackupStore();
 
+  const {
+    status: mgmtStatus,
+    operation: mgmtOperation,
+    dryRunManifest: mgmtDryRunManifest,
+    successMessage: mgmtSuccessMessage,
+    activeProjectId: mgmtActiveProjectId,
+    activeProjectName: mgmtActiveProjectName,
+    startOperation: mgmtStartOperation,
+    setDryRunManifest: mgmtSetDryRunManifest,
+    setProgress: mgmtSetProgress,
+    setSuccessMessage: mgmtSetSuccessMessage,
+    setStatus: mgmtSetStatus,
+    reset: mgmtReset,
+  } = useManagementStore();
+
+  // Bank copy picker state
+  const [bankCopyPickerOpen, setBankCopyPickerOpen] = useState(false);
+  const [bankCopySourceIndex, setBankCopySourceIndex] = useState<number>(0);
+
+  // Project list for BankCopyPickerDialog
+  const [projectList, setProjectList] = useState<ProjectSummary[]>([]);
+
+  // Refs to capture operation params for use in apply handler
+  const pendingRenameRef = useRef<string | null>(null);
+  const pendingBankCopyRef = useRef<{ targetProjectId: string; targetBankIndex: number } | null>(null);
+
   // Show confirmation dialog when device is detected but not yet confirmed (D-14)
   // Debounce: 500ms delay per UI-SPEC.md Interaction Contract
   useEffect(() => {
@@ -61,6 +101,23 @@ export default function Home() {
       setActiveSection("projects");
     }
   }, [confirmed]);
+
+  // Fetch project list when device is confirmed (for BankCopyPickerDialog)
+  useEffect(() => {
+    if (confirmed) {
+      listProjects({}).then(setProjectList).catch(() => {});
+    }
+  }, [confirmed]);
+
+  // Auto-dismiss management success message after 4 seconds
+  useEffect(() => {
+    if (mgmtSuccessMessage) {
+      const timer = setTimeout(() => {
+        mgmtReset();
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [mgmtSuccessMessage, mgmtReset]);
 
   const handleConfirm = async () => {
     if (mountPoint) {
@@ -155,6 +212,162 @@ export default function Home() {
     reset();
   }
 
+  // ---- Management operation handlers ----
+
+  async function handleRename(newName: string) {
+    if (!navProjectId) return;
+    pendingRenameRef.current = newName;
+    mgmtStartOperation(navProjectId, "", "rename");
+    try {
+      const manifest = await computeManagementDryRun(navProjectId, "rename", undefined, undefined, newName);
+      mgmtSetDryRunManifest(manifest);
+    } catch {
+      mgmtReset();
+    }
+  }
+
+  async function handleDuplicate() {
+    if (!navProjectId) return;
+    const projectName = mgmtActiveProjectName ?? "";
+    // Default name: append _COPY (uppercase per OT convention), truncate to 16 chars
+    let newName = `${projectName}_COPY`.substring(0, 16);
+    if (newName.length > 16 || newName === projectName) {
+      const prompted = window.prompt("Enter a name for the duplicate (max 16 chars, A-Z 0-9 _):", newName);
+      if (!prompted) return;
+      newName = prompted.toUpperCase().replace(/[^A-Z0-9_]/g, "").substring(0, 16);
+      if (!newName) return;
+    }
+    pendingRenameRef.current = newName;
+    mgmtStartOperation(navProjectId, projectName, "duplicate");
+    try {
+      const manifest = await computeManagementDryRun(navProjectId, "duplicate", undefined, undefined, newName);
+      mgmtSetDryRunManifest(manifest);
+    } catch {
+      mgmtReset();
+    }
+  }
+
+  async function handleExport() {
+    if (!navProjectId) return;
+    mgmtStartOperation(navProjectId, mgmtActiveProjectName ?? "", "export");
+    try {
+      const manifest = await computeManagementDryRun(navProjectId, "export");
+      mgmtSetDryRunManifest(manifest);
+    } catch {
+      mgmtReset();
+    }
+  }
+
+  function handleBankCopyTrigger(bankIndex: number) {
+    setBankCopySourceIndex(bankIndex);
+    setBankCopyPickerOpen(true);
+  }
+
+  async function handleBankCopyConfirm(targetProjectId: string, targetBankIndex: number) {
+    setBankCopyPickerOpen(false);
+    if (!navProjectId) return;
+    pendingBankCopyRef.current = { targetProjectId, targetBankIndex };
+    mgmtStartOperation(navProjectId, "", "bank-copy");
+    try {
+      const manifest = await computeManagementDryRun(
+        navProjectId,
+        "bank-copy",
+        targetProjectId,
+        bankCopySourceIndex,
+      );
+      mgmtSetDryRunManifest(manifest);
+    } catch {
+      mgmtReset();
+    }
+  }
+
+  async function handleMgmtDryRunApply() {
+    mgmtSetDryRunManifest(null);
+    mgmtSetStatus("in-progress");
+
+    const projectId = mgmtActiveProjectId;
+    const projectName = mgmtActiveProjectName ?? "";
+
+    try {
+      switch (mgmtOperation) {
+        case "rename": {
+          const newName = pendingRenameRef.current;
+          if (!projectId || !newName) break;
+          await renameProject(projectId, newName);
+          mgmtSetSuccessMessage(`Renamed ${projectName} -> ${newName}`);
+          break;
+        }
+        case "duplicate": {
+          const newName = pendingRenameRef.current;
+          if (!projectId || !newName) break;
+          const channel = new Channel<ManagementEvent>();
+          channel.onmessage = (event) => {
+            if (event.event === "progress") {
+              mgmtSetProgress({
+                filesProcessed: event.data.files_processed,
+                totalFiles: event.data.total_files,
+                currentFile: event.data.current_file,
+              });
+            } else if (event.event === "complete") {
+              mgmtSetSuccessMessage(`Duplicated ${projectName} -> ${newName}`);
+            } else if (event.event === "failed") {
+              mgmtSetStatus("failed");
+            }
+          };
+          await duplicateProject(projectId, newName, channel);
+          break;
+        }
+        case "export": {
+          if (!projectId) break;
+          const channel = new Channel<ManagementEvent>();
+          let exportedFiles = 0;
+          channel.onmessage = (event) => {
+            if (event.event === "progress") {
+              exportedFiles = event.data.files_processed;
+              mgmtSetProgress({
+                filesProcessed: event.data.files_processed,
+                totalFiles: event.data.total_files,
+                currentFile: event.data.current_file,
+              });
+            } else if (event.event === "complete") {
+              mgmtSetSuccessMessage(`Exported ${projectName} -- ${exportedFiles} files`);
+            } else if (event.event === "failed") {
+              mgmtSetStatus("failed");
+            }
+          };
+          await exportProject(projectId, channel);
+          break;
+        }
+        case "bank-copy": {
+          if (!projectId || !pendingBankCopyRef.current) break;
+          const { targetProjectId, targetBankIndex } = pendingBankCopyRef.current;
+          const channel = new Channel<ManagementEvent>();
+          channel.onmessage = (event) => {
+            if (event.event === "progress") {
+              mgmtSetProgress({
+                filesProcessed: event.data.files_processed,
+                totalFiles: event.data.total_files,
+                currentFile: event.data.current_file,
+              });
+            } else if (event.event === "complete") {
+              mgmtSetSuccessMessage(`Copied bank to project`);
+            } else if (event.event === "failed") {
+              mgmtSetStatus("failed");
+            }
+          };
+          await copyBank(projectId, bankCopySourceIndex, targetProjectId, targetBankIndex, {}, channel);
+          break;
+        }
+      }
+    } catch {
+      mgmtSetStatus("failed");
+    }
+  }
+
+  function handleMgmtDryRunCancel() {
+    mgmtReset();
+  }
+
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
@@ -216,6 +429,10 @@ export default function Home() {
                     ? () => handleBackUpClick(navProjectId, "")
                     : undefined
                 }
+                onRename={handleRename}
+                onDuplicate={handleDuplicate}
+                onExport={handleExport}
+                onCopyBankToProject={handleBankCopyTrigger}
               />
             )}
             {view === "backups" && <BackupsView />}
@@ -223,17 +440,54 @@ export default function Home() {
         )}
       </main>
 
-      {/* Success banner overlay */}
+      {/* Backup success banner overlay */}
       {successBanner && (
         <InlineSuccessBanner banner={successBanner} onDismiss={handleBannerDismiss} />
       )}
 
-      {/* Dry-run modal */}
+      {/* Management success message banner */}
+      {mgmtSuccessMessage && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-[hsl(140,30%,14%)] border-b border-[hsl(140,40%,28%)] px-4 py-2">
+          <div className="flex items-center gap-2 max-w-2xl mx-auto">
+            <span className="font-mono text-xs text-[hsl(140,60%,72%)]">
+              {mgmtSuccessMessage}
+            </span>
+            <button
+              type="button"
+              className="ml-auto font-mono text-xs text-[hsl(140,60%,72%)] hover:text-[hsl(140,60%,82%)]"
+              onClick={() => mgmtReset()}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Backup dry-run modal */}
       <DryRunModal
         open={dryRunManifest !== null}
         manifest={dryRunManifest}
         onApply={handleDryRunApply}
         onCancel={handleDryRunCancel}
+      />
+
+      {/* Management dry-run modal */}
+      <DryRunModal
+        open={mgmtDryRunManifest !== null && mgmtStatus === "dry-running"}
+        manifest={mgmtDryRunManifest}
+        onApply={handleMgmtDryRunApply}
+        onCancel={handleMgmtDryRunCancel}
+      />
+
+      {/* Bank copy picker dialog */}
+      <BankCopyPickerDialog
+        open={bankCopyPickerOpen}
+        sourceBankIndex={bankCopySourceIndex}
+        sourceProjectName={mgmtActiveProjectName ?? ""}
+        sourceProjectId={navProjectId ?? ""}
+        projects={projectList}
+        onConfirm={handleBankCopyConfirm}
+        onCancel={() => setBankCopyPickerOpen(false)}
       />
 
       {/* Volume confirmation dialog */}
