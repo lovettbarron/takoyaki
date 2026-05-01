@@ -304,9 +304,9 @@ export default function Home() {
           channel.onmessage = (event) => {
             if (event.event === "progress") {
               mgmtSetProgress({
-                filesProcessed: event.data.files_processed,
-                totalFiles: event.data.total_files,
-                currentFile: event.data.current_file,
+                filesProcessed: event.data.filesProcessed,
+                totalFiles: event.data.totalFiles,
+                currentFile: event.data.currentFile,
               });
             } else if (event.event === "complete") {
               mgmtSetSuccessMessage(`Duplicated ${projectName} -> ${newName}`);
@@ -323,11 +323,11 @@ export default function Home() {
           let exportedFiles = 0;
           channel.onmessage = (event) => {
             if (event.event === "progress") {
-              exportedFiles = event.data.files_processed;
+              exportedFiles = event.data.filesProcessed;
               mgmtSetProgress({
-                filesProcessed: event.data.files_processed,
-                totalFiles: event.data.total_files,
-                currentFile: event.data.current_file,
+                filesProcessed: event.data.filesProcessed,
+                totalFiles: event.data.totalFiles,
+                currentFile: event.data.currentFile,
               });
             } else if (event.event === "complete") {
               mgmtSetSuccessMessage(`Exported ${projectName} -- ${exportedFiles} files`);
@@ -345,9 +345,9 @@ export default function Home() {
           channel.onmessage = (event) => {
             if (event.event === "progress") {
               mgmtSetProgress({
-                filesProcessed: event.data.files_processed,
-                totalFiles: event.data.total_files,
-                currentFile: event.data.current_file,
+                filesProcessed: event.data.filesProcessed,
+                totalFiles: event.data.totalFiles,
+                currentFile: event.data.currentFile,
               });
             } else if (event.event === "complete") {
               mgmtSetSuccessMessage(`Copied bank to project`);
