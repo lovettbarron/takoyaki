@@ -73,10 +73,10 @@ Plans:
   5. A backup or restore that is interrupted mid-operation leaves the project in its pre-operation state (all-or-nothing guarantee)
 **Plans:** 4 plans
 Plans:
-- [ ] 03-01-PLAN.md — Rust backend: V2 migration, db::backups module, and five Tauri backup commands
-- [ ] 03-02-PLAN.md — Frontend foundation: TypeScript types, backup store, IPC wrappers, sidebar activation
-- [ ] 03-03-PLAN.md — Dry-run modal, backup progress view, success banner, and MetadataHeader Back Up button
-- [ ] 03-04-PLAN.md — Backups view with timeline, snapshot detail panel, and restore workflow
+- [x] 03-01-PLAN.md — Rust backend: V2 migration, db::backups module, and five Tauri backup commands
+- [x] 03-02-PLAN.md — Frontend foundation: TypeScript types, backup store, IPC wrappers, sidebar activation
+- [x] 03-03-PLAN.md — Dry-run modal, backup progress view, success banner, and MetadataHeader Back Up button
+- [x] 03-04-PLAN.md — Backups view with timeline, snapshot detail panel, and restore workflow
 **UI hint**: yes
 
 ### Phase 4: Advanced Management
