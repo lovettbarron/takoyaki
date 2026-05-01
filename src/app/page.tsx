@@ -16,6 +16,7 @@ import { BackupsView } from "@/components/backups/BackupsView";
 import { BackupProgressView } from "@/components/backup-progress/BackupProgressView";
 import { InlineSuccessBanner } from "@/components/backup-progress/InlineSuccessBanner";
 import { BankCopyPickerDialog } from "@/components/management/BankCopyPickerDialog";
+import { ConflictResolutionDialog } from "@/components/management/ConflictResolutionDialog";
 import { Separator } from "@/components/ui/separator";
 import {
   confirmDevice,
@@ -31,7 +32,7 @@ import {
   listProjects,
 } from "@/lib/tauri";
 import { Channel } from "@tauri-apps/api/core";
-import type { BackupEvent, ManagementEvent, ProjectSummary } from "@/lib/types";
+import type { BackupEvent, ManagementEvent, ProjectSummary, ConflictResolution } from "@/lib/types";
 
 type ActiveSection = "projects" | "samples" | "backups" | "settings";
 
@@ -74,6 +75,10 @@ export default function Home() {
   // Bank copy picker state
   const [bankCopyPickerOpen, setBankCopyPickerOpen] = useState(false);
   const [bankCopySourceIndex, setBankCopySourceIndex] = useState<number>(0);
+
+  // Conflict resolution dialog state
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [pendingConflicts, setPendingConflicts] = useState<Array<{ filename: string; sourceHash: string; targetHash: string }>>([]);
 
   // Project list for BankCopyPickerDialog
   const [projectList, setProjectList] = useState<ProjectSummary[]>([]);
@@ -281,12 +286,47 @@ export default function Home() {
     }
   }
 
-  async function handleMgmtDryRunApply() {
-    mgmtSetDryRunManifest(null);
+  // Execute bank copy with given conflict resolutions (empty map = no conflicts or all defaulted)
+  async function executeBankCopy(resolutions: Record<string, string>) {
+    const projectId = mgmtActiveProjectId;
+    if (!projectId || !pendingBankCopyRef.current) return;
+    const { targetProjectId, targetBankIndex } = pendingBankCopyRef.current;
     mgmtSetStatus("in-progress");
+    const channel = new Channel<ManagementEvent>();
+    channel.onmessage = (event) => {
+      if (event.event === "progress") {
+        mgmtSetProgress({
+          filesProcessed: event.data.filesProcessed,
+          totalFiles: event.data.totalFiles,
+          currentFile: event.data.currentFile,
+        });
+      } else if (event.event === "complete") {
+        mgmtSetSuccessMessage(`Copied bank to project`);
+      } else if (event.event === "failed") {
+        mgmtSetStatus("failed");
+      }
+    };
+    try {
+      await copyBank(projectId, bankCopySourceIndex, targetProjectId, targetBankIndex, resolutions, channel);
+    } catch {
+      mgmtSetStatus("failed");
+    }
+  }
 
+  async function handleMgmtDryRunApply() {
     const projectId = mgmtActiveProjectId;
     const projectName = mgmtActiveProjectName ?? "";
+
+    // Bank-copy with conflicts: show resolution dialog before executing
+    if (mgmtOperation === "bank-copy" && mgmtDryRunManifest && mgmtDryRunManifest.conflictDetails.length > 0) {
+      setPendingConflicts(mgmtDryRunManifest.conflictDetails);
+      mgmtSetDryRunManifest(null);
+      setConflictDialogOpen(true);
+      return;
+    }
+
+    mgmtSetDryRunManifest(null);
+    mgmtSetStatus("in-progress");
 
     try {
       switch (mgmtOperation) {
@@ -339,23 +379,8 @@ export default function Home() {
           break;
         }
         case "bank-copy": {
-          if (!projectId || !pendingBankCopyRef.current) break;
-          const { targetProjectId, targetBankIndex } = pendingBankCopyRef.current;
-          const channel = new Channel<ManagementEvent>();
-          channel.onmessage = (event) => {
-            if (event.event === "progress") {
-              mgmtSetProgress({
-                filesProcessed: event.data.filesProcessed,
-                totalFiles: event.data.totalFiles,
-                currentFile: event.data.currentFile,
-              });
-            } else if (event.event === "complete") {
-              mgmtSetSuccessMessage(`Copied bank to project`);
-            } else if (event.event === "failed") {
-              mgmtSetStatus("failed");
-            }
-          };
-          await copyBank(projectId, bankCopySourceIndex, targetProjectId, targetBankIndex, {}, channel);
+          // No conflicts — proceed immediately with empty resolutions map
+          await executeBankCopy({});
           break;
         }
       }
@@ -365,6 +390,16 @@ export default function Home() {
   }
 
   function handleMgmtDryRunCancel() {
+    mgmtReset();
+  }
+
+  function handleConflictResolve(resolutions: Record<string, ConflictResolution>) {
+    setConflictDialogOpen(false);
+    executeBankCopy(resolutions);
+  }
+
+  function handleConflictCancel() {
+    setConflictDialogOpen(false);
     mgmtReset();
   }
 
@@ -488,6 +523,14 @@ export default function Home() {
         projects={projectList}
         onConfirm={handleBankCopyConfirm}
         onCancel={() => setBankCopyPickerOpen(false)}
+      />
+
+      {/* Conflict resolution dialog — shown after dry-run Apply when conflicts exist */}
+      <ConflictResolutionDialog
+        open={conflictDialogOpen}
+        conflicts={pendingConflicts}
+        onResolve={handleConflictResolve}
+        onCancel={handleConflictCancel}
       />
 
       {/* Volume confirmation dialog */}

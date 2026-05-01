@@ -67,6 +67,14 @@ pub struct FileChangeEntry {
     pub size_bytes: u64,
 }
 
+/// Conflict detail for bank copy operations (D-08 resolution UI, Plan 04-07).
+#[derive(Debug, Serialize, Type, Clone)]
+pub struct ConflictDetail {
+    pub filename: String,
+    pub source_hash: String,
+    pub target_hash: String,
+}
+
 /// Full dry-run manifest returned by compute_dry_run (SAFE-07).
 #[derive(Debug, Serialize, Type, Clone)]
 pub struct FileChangeManifest {
@@ -79,6 +87,8 @@ pub struct FileChangeManifest {
     pub destination_path: String,
     pub operation_label: String,
     pub project_name: String,
+    /// Populated for bank-copy operations only — empty for backup/restore/duplicate/rename/export.
+    pub conflict_details: Vec<ConflictDetail>,
 }
 
 // ---------------------------------------------------------------------------
@@ -653,6 +663,7 @@ pub async fn compute_dry_run(
             destination_path: dest_path.to_string_lossy().into_owned(),
             operation_label: format!("Back Up {}", project_name),
             project_name,
+            conflict_details: Vec::new(),
         })
     } else if operation == "restore" {
         // 2b. Restore dry-run: compare backup files vs current card state
@@ -782,6 +793,7 @@ pub async fn compute_dry_run(
             destination_path: card_path,
             operation_label: format!("Restore Snapshot -- {}", backup_label),
             project_name,
+            conflict_details: Vec::new(),
         })
     } else {
         Err(AppError::Io(format!(

@@ -119,6 +119,8 @@ export interface FileChangeManifest {
   destinationPath: string;
   operationLabel: string;
   projectName: string;
+  /** Populated for bank-copy operations only — empty for all other operations. */
+  conflictDetails: Array<{ filename: string; sourceHash: string; targetHash: string }>;
 }
 
 export type BackupEventType = "started" | "progress" | "complete" | "failed";
