@@ -4,6 +4,7 @@ pub mod db;
 pub mod device;
 mod error;
 pub mod health;
+pub mod management;
 
 pub use error::{AppError, Result};
 
