@@ -44,6 +44,11 @@ pub fn run() {
         commands::backup::compute_dry_run,
         commands::backup::list_backups,
         commands::backup::cancel_backup,
+        commands::management::compute_management_dry_run,
+        commands::management::duplicate_project,
+        commands::management::rename_project,
+        commands::management::export_project,
+        commands::management::copy_bank,
     ]);
 
     #[cfg(debug_assertions)]

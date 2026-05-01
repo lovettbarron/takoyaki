@@ -16,7 +16,6 @@ use crate::health::resolve_ot_path;
 use crate::management::project_work;
 use serde::Serialize;
 use specta::Type;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
@@ -108,13 +107,7 @@ pub fn export_project(
         }
     }
 
-    // 3. Get project name from directory name
-    let project_name = project_dir
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "PROJECT".to_string());
-
-    // 4. Ensure parent directory of export_dest exists
+    // 3. Ensure parent directory of export_dest exists
     if let Some(parent) = export_dest.parent() {
         std::fs::create_dir_all(parent)?;
     }

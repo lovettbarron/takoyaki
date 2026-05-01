@@ -54,6 +54,8 @@ pub enum ChangeType {
     Modified,
     Removed,
     Unchanged,
+    /// Hash-mismatch conflict detected during bank copy (Phase 4 D-08).
+    Conflict,
 }
 
 /// A single file entry in a dry-run manifest.
