@@ -49,7 +49,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Project Management
 
 - [ ] **MGMT-01**: User can duplicate/copy an OT project with automatic sample path remapping
-- [ ] **MGMT-02**: User can rename an OT project on disk with internal name field updated
+- [ ] **MGMT-02**: User can rename an OT project directory on disk (directory name is the authoritative project name; no binary header contains a name field)
 - [ ] **MGMT-03**: User can export a project as a self-contained zip with all referenced samples collected
 - [x] **MGMT-04
 **: User can search and filter projects by name, tempo, or date via indexed metadata
