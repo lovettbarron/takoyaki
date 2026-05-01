@@ -20,7 +20,7 @@ interface ManagementState {
 
   setStatus: (status: ManagementStatus) => void;
   startOperation: (projectId: string, projectName: string, operation: ManagementOperation) => void;
-  setDryRunManifest: (manifest: FileChangeManifest) => void;
+  setDryRunManifest: (manifest: FileChangeManifest | null) => void;
   setConflicts: (conflicts: ConflictEntry[]) => void;
   setProgress: (progress: { filesProcessed: number; totalFiles: number; currentFile: string }) => void;
   setSuccessMessage: (message: string) => void;

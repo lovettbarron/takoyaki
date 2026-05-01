@@ -25,7 +25,7 @@ export function BankGridCell({
 }: BankGridCellProps) {
   return (
     <ContextMenu>
-      <ContextMenuTrigger asChild>
+      <ContextMenuTrigger>
         <button
           type="button"
           onClick={populated ? onClick : undefined}

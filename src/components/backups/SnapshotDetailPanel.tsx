@@ -29,6 +29,8 @@ function changeTypeColor(ct: ChangeType): string {
       return "text-[hsl(0,68%,48%)]";
     case "Unchanged":
       return "text-muted-foreground";
+    case "Conflict":
+      return "text-[hsl(280,60%,55%)]";
   }
 }
 
