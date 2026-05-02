@@ -110,10 +110,10 @@ Plans:
   4. When Wallflower is not installed or its database is unavailable, the Wallflower panel is hidden or shows a graceful "not connected" state — no crash, no error dialog
 **Plans:** 4 plans
 Plans:
-- [ ] 05-01-PLAN.md — Dependencies, V3 migration, and Rust sample assignment commands
-- [ ] 05-02-PLAN.md — Wallflower Rust backend and frontend TypeScript foundation
-- [ ] 05-03-PLAN.md — Frontend sample assignment flow with SlotRow and SamplesTab wiring
-- [ ] 05-04-PLAN.md — Frontend Wallflower panel, push-to-slot flow, and end-to-end verification
+- [x] 05-01-PLAN.md — Dependencies, V3 migration, and Rust sample assignment commands
+- [x] 05-02-PLAN.md — Wallflower Rust backend and frontend TypeScript foundation
+- [x] 05-03-PLAN.md — Frontend sample assignment flow with SlotRow and SamplesTab wiring
+- [x] 05-04-PLAN.md — Frontend Wallflower panel, push-to-slot flow, and end-to-end verification
 **UI hint**: yes
 
 ## Progress
