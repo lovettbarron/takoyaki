@@ -33,6 +33,10 @@ export async function dismissDevice(): Promise<void> {
   return invoke("dismiss_device");
 }
 
+export async function indexOtProjects(): Promise<number> {
+  return invoke("index_ot_projects");
+}
+
 // Phase 2: Project browsing IPC wrappers
 
 export async function listProjects(
@@ -193,4 +197,13 @@ export async function searchWallflowerSamples(query: string): Promise<Wallflower
 
 export async function setWallflowerDbPath(path: string): Promise<WallflowerStatus> {
   return invoke("set_wallflower_db_path", { path });
+}
+
+// ── Audio Preview IPC ─────────────────────────────────────────────────────
+
+export async function getSampleAudioBytes(
+  projectId: string,
+  samplePath: string
+): Promise<number[]> {
+  return invoke("get_sample_audio_bytes", { projectId, samplePath });
 }

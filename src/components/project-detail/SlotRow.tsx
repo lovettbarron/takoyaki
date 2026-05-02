@@ -1,17 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CircleCheck, CircleX, CircleAlert, Upload } from "lucide-react";
+import { CircleCheck, CircleX, CircleAlert, Upload, Play, Square, Loader2 } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import type { SampleSlot, HealthIssue } from "@/lib/types";
 
 interface SlotRowProps {
@@ -23,6 +18,12 @@ interface SlotRowProps {
   healthIssues?: HealthIssue[];
   /** Called when the assign button is clicked — opens the file picker flow in SamplesTab */
   onAssign?: (slotIndex: number, slotType: "flex" | "static") => void;
+  /** Called when the play button is clicked — triggers audio preview */
+  onPlay?: (slotIndex: number, slotType: "flex" | "static") => void;
+  /** Current playback state from useAudioPreview */
+  playbackState?: "idle" | "loading" | "playing";
+  /** Whether THIS specific slot is the currently active/playing one */
+  isPlaying?: boolean;
   /** Inline error message for this slot (hard block or assignment failure) */
   assignError?: string | null;
   /** One-click redirect for slot-type mismatch errors (D-13) */
@@ -68,69 +69,40 @@ function StatusIcon({
 }) {
   if (status === "ok") {
     return (
-      <Tooltip>
-        <TooltipTrigger>
-          <CircleCheck
-            size={16}
-            className="text-[hsl(140,60%,42%)]"
-            aria-label={tooltip}
-          />
-        </TooltipTrigger>
-        <TooltipContent>{tooltip}</TooltipContent>
-      </Tooltip>
+      <span title={tooltip}>
+        <CircleCheck size={16} className="text-[hsl(140,60%,42%)]" aria-label={tooltip} />
+      </span>
     );
   }
 
   if (status === "error") {
     return (
-      <Tooltip>
-        <TooltipTrigger>
-          <CircleX
-            size={16}
-            className="text-[hsl(0,68%,48%)]"
-            aria-label={tooltip}
-          />
-        </TooltipTrigger>
-        <TooltipContent>{tooltip}</TooltipContent>
-      </Tooltip>
+      <span title={tooltip}>
+        <CircleX size={16} className="text-[hsl(0,68%,48%)]" aria-label={tooltip} />
+      </span>
     );
   }
 
   if (status === "warning") {
     return (
-      <Tooltip>
-        <TooltipTrigger>
-          <CircleAlert
-            size={16}
-            className="text-[hsl(38,85%,55%)]"
-            aria-label={tooltip}
-          />
-        </TooltipTrigger>
-        <TooltipContent>{tooltip}</TooltipContent>
-      </Tooltip>
+      <span title={tooltip}>
+        <CircleAlert size={16} className="text-[hsl(38,85%,55%)]" aria-label={tooltip} />
+      </span>
     );
   }
 
   if (status === "info") {
     return (
-      <Tooltip>
-        <TooltipTrigger>
-          <CircleAlert
-            size={16}
-            className="text-[hsl(210,40%,52%)]"
-            aria-label={tooltip}
-          />
-        </TooltipTrigger>
-        <TooltipContent>{tooltip}</TooltipContent>
-      </Tooltip>
+      <span title={tooltip}>
+        <CircleAlert size={16} className="text-[hsl(210,40%,52%)]" aria-label={tooltip} />
+      </span>
     );
   }
 
-  // unknown — health check in progress, no icon
   return null;
 }
 
-export function SlotRow({ slot, slotType, crossRefs, healthIssues, onAssign, assignError, assignErrorRedirect }: SlotRowProps) {
+export function SlotRow({ slot, slotType, crossRefs, healthIssues, onAssign, onPlay, playbackState, isPlaying, assignError, assignErrorRedirect }: SlotRowProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const slotNumber = String(slot.slot_index + 1).padStart(3, "0");
@@ -164,16 +136,9 @@ export function SlotRow({ slot, slotType, crossRefs, healthIssues, onAssign, ass
         {/* Filename — flex-1 */}
         <span className="min-w-0 flex-1 px-2 font-mono text-sm">
           {slot.filename && slot.full_path ? (
-            <Tooltip>
-              <TooltipTrigger>
-                <span className="block truncate max-w-xs">
-                  {slot.filename}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-sm break-all">
-                {slot.full_path}
-              </TooltipContent>
-            </Tooltip>
+            <span className="block truncate max-w-xs" title={slot.full_path}>
+              {slot.filename}
+            </span>
           ) : (
             <span className="text-muted-foreground">--</span>
           )}
@@ -188,6 +153,33 @@ export function SlotRow({ slot, slotType, crossRefs, healthIssues, onAssign, ass
         <span className="w-12 shrink-0 flex items-center justify-center">
           {slotHealth && (
             <StatusIcon status={slotHealth.status} tooltip={slotHealth.tooltip} />
+          )}
+        </span>
+
+        {/* Play button — w-8 */}
+        <span className="w-8 shrink-0 flex items-center justify-center">
+          {slot.occupied && slot.full_path && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlay?.(slot.slot_index, slotType);
+              }}
+              className="h-8 w-8 flex items-center justify-center rounded hover:bg-[hsl(30,8%,20%)] text-muted-foreground hover:text-foreground"
+              aria-label={
+                isPlaying
+                  ? `Stop preview of ${slotType} slot ${slot.slot_index + 1}`
+                  : `Preview ${slotType} slot ${slot.slot_index + 1}`
+              }
+            >
+              {isPlaying && playbackState === "loading" ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : isPlaying && playbackState === "playing" ? (
+                <Square size={12} className="fill-current" />
+              ) : (
+                <Play size={14} className="fill-current" />
+              )}
+            </button>
           )}
         </span>
 

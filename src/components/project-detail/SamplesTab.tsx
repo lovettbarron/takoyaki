@@ -10,6 +10,7 @@ import { useSamplesStore } from "@/lib/stores/samples";
 import { useDeviceStore } from "@/lib/stores/device";
 import { DryRunModal } from "@/components/backups/DryRunModal";
 import type { SampleSlot, BankDetail, HealthCheckComplete, HealthIssue, SampleDryRunResult, WallflowerSample } from "@/lib/types";
+import { useAudioPreview } from "@/hooks/useAudioPreview";
 import { SlotRow } from "./SlotRow";
 import { WallflowerPanel } from "./WallflowerPanel";
 import { SlotPickerDialog } from "./SlotPickerDialog";
@@ -67,6 +68,8 @@ function SlotTableHeader() {
       <span className="w-12 shrink-0 text-center font-mono text-xs font-semibold uppercase text-muted-foreground">
         STATUS
       </span>
+      {/* Trailing play column — no label (icon-only column) */}
+      <span className="w-8 shrink-0" />
       {/* Trailing assign column — no label (icon-only column) */}
       <span className="w-8 shrink-0" />
     </div>
@@ -80,6 +83,9 @@ interface SlotSectionProps {
   slotType: "flex" | "static";
   healthIssues?: HealthIssue[];
   onAssign?: (slotIndex: number, slotType: "flex" | "static") => void;
+  onPlay?: (slotIndex: number, slotType: "flex" | "static") => void;
+  activeSlotKey?: string | null;
+  playbackState?: "idle" | "loading" | "playing";
   slotError: { slotIndex: number; slotType: "flex" | "static"; message: string } | null;
   slotErrorRedirect: { label: string; targetSlotType: "flex" | "static"; targetSlotIndex: number } | null;
   onSlotRedirect: () => void;
@@ -93,6 +99,9 @@ function SlotSection({
   slotType,
   healthIssues,
   onAssign,
+  onPlay,
+  activeSlotKey,
+  playbackState,
   slotError,
   slotErrorRedirect,
   onSlotRedirect,
@@ -115,6 +124,9 @@ function SlotSection({
             crossRefs={crossRefMap.get(slot.slot_index)}
             healthIssues={healthIssues}
             onAssign={onAssign}
+            onPlay={onPlay}
+            playbackState={playbackState}
+            isPlaying={activeSlotKey === `${slotType}-${slot.slot_index}`}
             assignError={isErrorSlot ? slotError!.message : null}
             assignErrorRedirect={
               isErrorSlot && slotErrorRedirect
@@ -183,6 +195,14 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
     reset,
   } = useSamplesStore();
 
+  // Audio preview hook
+  const { play: playAudio, stop: stopAudio, playbackState: audioPlaybackState, activeSlotKey: audioActiveSlotKey } = useAudioPreview();
+
+  // Stop audio playback on unmount (navigating away)
+  useEffect(() => {
+    return () => { stopAudio(); };
+  }, [stopAudio]);
+
   // Check Wallflower connection status on mount (D-07: panel hidden when unavailable)
   useEffect(() => {
     getWallflowerStatus()
@@ -212,6 +232,15 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
 
   const flexSlots = samples?.flex ?? [];
   const staticSlots = samples?.static_slots ?? [];
+
+  // ── Audio preview handler ──
+  function handlePlay(slotIndex: number, slotType: "flex" | "static") {
+    const slotKey = `${slotType}-${slotIndex}`;
+    const slots = slotType === "flex" ? flexSlots : staticSlots;
+    const slot = slots[slotIndex];
+    if (!slot?.full_path) return;
+    playAudio(projectId, slot.full_path, slotKey);
+  }
 
   // ── Assign flow handler (triggered by SlotRow assign button) ──
   // T-05-11: Guard against concurrent assigns — return early when not idle
@@ -438,6 +467,9 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
           slotType="flex"
           healthIssues={healthData?.issues}
           onAssign={assignHandler}
+          onPlay={handlePlay}
+          activeSlotKey={audioActiveSlotKey}
+          playbackState={audioPlaybackState}
           slotError={slotError}
           slotErrorRedirect={slotErrorRedirect}
           onSlotRedirect={handleSlotRedirect}
@@ -455,6 +487,9 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
           slotType="static"
           healthIssues={healthData?.issues}
           onAssign={assignHandler}
+          onPlay={handlePlay}
+          activeSlotKey={audioActiveSlotKey}
+          playbackState={audioPlaybackState}
           slotError={slotError}
           slotErrorRedirect={slotErrorRedirect}
           onSlotRedirect={handleSlotRedirect}
