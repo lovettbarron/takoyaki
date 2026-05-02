@@ -17,6 +17,7 @@ import { BackupProgressView } from "@/components/backup-progress/BackupProgressV
 import { InlineSuccessBanner } from "@/components/backup-progress/InlineSuccessBanner";
 import { BankCopyPickerDialog } from "@/components/management/BankCopyPickerDialog";
 import { ConflictResolutionDialog } from "@/components/management/ConflictResolutionDialog";
+import { WallflowerSettings } from "@/components/settings/WallflowerSettings";
 import { Separator } from "@/components/ui/separator";
 import {
   confirmDevice,
@@ -471,6 +472,14 @@ export default function Home() {
               />
             )}
             {view === "backups" && <BackupsView />}
+            {activeSection === "settings" && (
+              <div className="flex flex-col p-8 max-w-sm">
+                <h2 className="font-mono text-base font-semibold text-foreground mb-6">
+                  SETTINGS
+                </h2>
+                <WallflowerSettings />
+              </div>
+            )}
           </>
         )}
       </main>
