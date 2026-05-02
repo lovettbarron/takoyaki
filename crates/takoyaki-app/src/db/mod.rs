@@ -8,6 +8,7 @@ use tracing::info;
 
 const MIGRATION_V1: &str = include_str!("../../../../migrations/V1__initial_schema.sql");
 const MIGRATION_V2: &str = include_str!("../../../../migrations/V2__backup_schema.sql");
+const MIGRATION_V3: &str = include_str!("../../../../migrations/V3__wallflower_settings.sql");
 
 /// Open (or create) a Takoyaki database at the given path, running migrations as needed.
 pub fn open_database(path: &Path) -> rusqlite::Result<Connection> {
@@ -59,6 +60,36 @@ fn initialize(conn: &Connection) -> rusqlite::Result<()> {
         conn.execute_batch("PRAGMA user_version = 2;")?;
     }
 
+    if current_version < 3 {
+        info!("Running V3 migration: settings table");
+        conn.execute_batch(MIGRATION_V3)?;
+        conn.execute_batch("PRAGMA user_version = 3;")?;
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Settings helpers (V3 migration)
+// ---------------------------------------------------------------------------
+
+/// Read a settings value by key. Returns None if the key is not found or value is empty.
+pub fn get_setting(conn: &Connection, key: &str) -> Result<Option<String>, rusqlite::Error> {
+    conn.query_row(
+        "SELECT value FROM settings WHERE key = ?1",
+        rusqlite::params![key],
+        |row| row.get::<_, String>(0),
+    )
+    .optional()
+    .map(|opt| opt.filter(|s| !s.is_empty()))
+}
+
+/// Write or overwrite a settings value.
+pub fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<(), rusqlite::Error> {
+    conn.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)",
+        rusqlite::params![key, value],
+    )?;
     Ok(())
 }
 
