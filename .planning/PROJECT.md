@@ -21,7 +21,7 @@ An Octatrack user can manage their projects and samples with complete confidence
 
 - [ ] Assign samples to OT track slots from desktop UI
 - [ ] Assign samples to OT track slots from desktop UI
-- [ ] Move, copy, duplicate, and archive OT projects on the CF card
+- [x] Move, copy, duplicate, and archive OT projects on the CF card — Validated in Phase 4: Advanced Management
 - [ ] Clean-room Rust parser for OT binary formats (.work, .strd, .ot, bank files, marker files)
 - [ ] USB mode support — read/write OT when mounted as USB disk
 - [ ] Optional Wallflower integration — read Wallflower SQLite DB for metadata search (key, BPM, tags)
@@ -79,7 +79,7 @@ An Octatrack user can manage their projects and samples with complete confidence
 
 This document evolves at phase transitions and milestone boundaries.
 
-Last updated: 2026-05-01 (Phase 3 complete — backup, restore, dry-run preview, snapshot history)
+Last updated: 2026-05-02 (Phase 4 complete — duplicate, rename, export, bank copy with conflict resolution)
 
 **After each phase transition** (via `/gsd-transition`):
 1. Requirements invalidated? → Move to Out of Scope with reason
@@ -95,4 +95,4 @@ Last updated: 2026-05-01 (Phase 3 complete — backup, restore, dry-run preview,
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-29 after initialization*
+*Last updated: 2026-05-02 after Phase 4 completion*
