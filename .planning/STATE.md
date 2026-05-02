@@ -140,6 +140,12 @@ None yet.
 - Phase 1 research flag: macOS DiskArbitration FFI for volume detection — may use `sysinfo` + `notify` Kqueue backend as alternative; validate early
 - Phase 4 research flag: Cross-project bank copy slot conflict resolution has no open-source reference implementation
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260502-qkl | Add audio preview (play/stop) for sample slots | 2026-05-02 | d7d08c4 | [260502-qkl-add-the-ability-to-preview-samples-and-i](./quick/260502-qkl-add-the-ability-to-preview-samples-and-i/) |
+
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
