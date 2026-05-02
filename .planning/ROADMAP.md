@@ -90,13 +90,13 @@ Plans:
   4. User can copy a bank from one project to another with sample slots automatically remapped and conflicts surfaced for resolution
 **Plans:** 7 plans
 Plans:
-- [ ] 04-01-PLAN.md — Rust management module: project.work parser, OT name validation, rename, duplicate
-- [ ] 04-02-PLAN.md — Frontend foundation: TypeScript types, management store, IPC wrappers, context-menu install
-- [ ] 04-03-PLAN.md — Rust export-to-zip, bank copy with conflict detection, Tauri command registration
-- [ ] 04-04-PLAN.md — Frontend UI: MetadataHeader toolbar, inline rename, BankCopyPickerDialog, page.tsx wiring
-- [ ] 04-05-PLAN.md — End-to-end integration verification checkpoint
-- [ ] 04-06-PLAN.md — [gap closure] Correct ROADMAP SC-2 and REQUIREMENTS MGMT-02 wording
-- [ ] 04-07-PLAN.md — [gap closure] Conflict resolution UI for bank copy flow
+- [x] 04-01-PLAN.md — Rust management module: project.work parser, OT name validation, rename, duplicate
+- [x] 04-02-PLAN.md — Frontend foundation: TypeScript types, management store, IPC wrappers, context-menu install
+- [x] 04-03-PLAN.md — Rust export-to-zip, bank copy with conflict detection, Tauri command registration
+- [x] 04-04-PLAN.md — Frontend UI: MetadataHeader toolbar, inline rename, BankCopyPickerDialog, page.tsx wiring
+- [x] 04-05-PLAN.md — End-to-end integration verification checkpoint
+- [x] 04-06-PLAN.md — [gap closure] Correct ROADMAP SC-2 and REQUIREMENTS MGMT-02 wording
+- [x] 04-07-PLAN.md — [gap closure] Conflict resolution UI for bank copy flow
 **UI hint**: yes
 
 ### Phase 5: Sample Assignment and Wallflower
