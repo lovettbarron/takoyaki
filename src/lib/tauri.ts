@@ -9,6 +9,10 @@ import type {
   FileChangeManifest,
   BackupEvent,
   ManagementEvent,
+  SampleDryRunResult,
+  AssignSampleResult,
+  WallflowerStatus,
+  WallflowerSample,
 } from "./types";
 
 export interface DeviceStatus {
@@ -154,4 +158,39 @@ export async function copyBank(
     conflictResolutions,
     onEvent,
   });
+}
+
+// ── Phase 5: Sample Assignment IPC ──────────────────────────────────────
+
+export async function computeSampleDryRun(
+  projectId: string,
+  slotType: "flex" | "static",
+  slotIndex: number,
+  filePath: string,
+): Promise<SampleDryRunResult> {
+  return invoke("compute_sample_dry_run", { projectId, slotType, slotIndex, filePath });
+}
+
+export async function assignSample(
+  projectId: string,
+  slotType: "flex" | "static",
+  slotIndex: number,
+  filePath: string,
+  fromWallflower: boolean,
+): Promise<AssignSampleResult> {
+  return invoke("assign_sample", { projectId, slotType, slotIndex, filePath, fromWallflower });
+}
+
+// ── Phase 5: Wallflower IPC ─────────────────────────────────────────────
+
+export async function getWallflowerStatus(): Promise<WallflowerStatus> {
+  return invoke("get_wallflower_status");
+}
+
+export async function searchWallflowerSamples(query: string): Promise<WallflowerSample[]> {
+  return invoke("search_wallflower_samples", { query });
+}
+
+export async function setWallflowerDbPath(path: string): Promise<WallflowerStatus> {
+  return invoke("set_wallflower_db_path", { path });
 }
