@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: true
 preset: base-nova
 created: 2026-05-02
+revised: 2026-05-02
 ---
 
 # Phase 5 — UI Design Contract
@@ -55,19 +56,20 @@ Source: `MetadataHeader.tsx` (h-8 toolbar), `BankCopyPickerDialog.tsx` (w-12 h-1
 
 | Role | Size | Weight | Line Height | Font |
 |------|------|--------|-------------|------|
+| Badge / Label | 12px (text-xs) | 400 regular | 1.4 | Iosevka mono |
 | Body | 14px (text-sm) | 400 regular | 1.5 | Iosevka mono |
-| Label | 12px (text-xs) | 400 regular | 1.4 | Iosevka mono |
-| Heading | 16px (text-base) | 600 semibold | 1.2 | Iosevka mono |
+| Heading / Section | 16px (text-base) | 600 semibold | 1.2 | Iosevka mono |
 | Display | 24px (text-2xl) | 600 semibold | 1.2 | Iosevka mono |
 
 Notes:
 - Monospace is the default for all UI text (globals.css body font-family: var(--font-mono)) — unchanged from Phases 1–4
 - Proportional (Inter sans) reserved for: modal operation summaries (dry-run summary line), longer descriptive text — matching `DryRunModal.tsx` fontFamily pattern
 - Tabular-nums class required on all numeric data (slot indices, file counts, BPM values, file sizes)
-- Section headings ("FLEX SAMPLES", "STATIC SAMPLES", "WALLFLOWER LIBRARY") use text-lg (18px) font-semibold — matches existing SamplesTab pattern
+- Section headings ("FLEX SAMPLES", "STATIC SAMPLES", "WALLFLOWER LIBRARY") use text-base (16px) font-semibold — consolidated from text-lg to stay within the 4-size scale
+- Badge/chip labels (key, BPM, tag badges in WallflowerSampleRow, status chips in Slot Picker): text-xs (12px) — 10px `text-[10px]` is collapsed into this tier
 - Wallflower sample BPM and key values render in text-xs tabular-nums (these are always numeric)
 
-Source: `globals.css`, `SamplesTab.tsx` (text-lg section headings), `DryRunModal.tsx` (var(--font-sans) for summary), `SlotRow.tsx` (text-xs labels). Unchanged from Phase 4 UI-SPEC.
+Source: `globals.css`, `SamplesTab.tsx` (section headings), `DryRunModal.tsx` (var(--font-sans) for summary), `SlotRow.tsx` (text-xs labels). Revised: 10px and 18px sizes collapsed per checker D4 constraint.
 
 ---
 
@@ -143,7 +145,7 @@ Displayed below the slot row when an incompatible assignment is attempted (SMPL-
 - Text: `text-xs text-destructive` — error explanation
 - Action buttons: two inline buttons, `font-mono text-xs`, separated by `gap-2`:
   - Primary: `"Assign to Static #NNN"` (variant="default") — one-click redirect to the equivalent slot in the correct type
-  - Secondary: `"Cancel"` (variant="ghost") — dismisses the error without action
+  - Secondary: `"Dismiss"` (variant="ghost") — dismisses the error without action
 - Dismissed automatically when: user clicks either button or navigates away
 
 ### Format Warning Inline (Soft Block)
@@ -161,6 +163,8 @@ No action button redirect (there is no equivalent correct slot for an incompatib
 ### Wallflower Panel
 
 Collapsible section rendered below the Static Samples list in `SamplesTab`. Hidden entirely when Wallflower DB is unavailable (D-07).
+
+Focal point: the Wallflower panel is the primary discovery surface on the SamplesTab — the slot lists above provide context while the panel below drives the push-to-slot action. The search bar and the Push button on each sample row are the two dominant interactive elements.
 
 **Panel structure:**
 
@@ -191,10 +195,10 @@ Layout: `flex h-9 items-center px-3 gap-2 border-b border-border`
 
 Columns (left to right):
 1. Filename: `font-mono text-xs text-foreground flex-1 min-w-0 truncate`
-2. Key badge: `font-mono text-[10px] text-muted-foreground w-8 tabular-nums` — shows detected musical key (e.g., "C#4") or empty if null
-3. BPM badge: `font-mono text-[10px] text-muted-foreground w-10 tabular-nums` — shows BPM (e.g., "120") or empty if null
-4. Tag badges: `flex gap-1 shrink-0` — up to 3 tags shown as `<Badge variant="outline" className="font-mono text-[10px] h-4 px-1">`, overflow with "+N" count badge
-5. Push button: `h-6 w-6` icon button, `Upload` lucide icon (12px), `variant="ghost"`, `shrink-0` — triggers push-to-slot flow
+2. Key badge: `font-mono text-xs text-muted-foreground w-8 tabular-nums` — shows detected musical key (e.g., "C#4") or empty if null
+3. BPM badge: `font-mono text-xs text-muted-foreground w-10 tabular-nums` — shows BPM (e.g., "120") or empty if null
+4. Tag badges: `flex gap-1 shrink-0` — up to 3 tags shown as `<Badge variant="outline" className="font-mono text-xs h-4 px-1">`, overflow with "+N" count badge
+5. Push button: `h-6 w-6` icon button, `Upload` lucide icon (12px), `variant="ghost"`, `shrink-0`, `aria-label="Push FILENAME to slot"` — triggers push-to-slot flow
 
 Selected row (after click on row body or push button):
 - `bg-[hsl(30,8%,20%)] border-l-2 border-[hsl(38,85%,55%)]` — accent left bar + muted highlight
@@ -215,12 +219,12 @@ Triggered when user clicks the Push button on a Wallflower sample row. Reuses `D
 - Scrollable list of all 128 slots for the selected type (ScrollArea, max-h-48)
 - Each row: slot number (`#NNN`, `w-12 font-mono text-xs tabular-nums`) + filename if occupied (`flex-1 text-xs truncate text-muted-foreground`) + status chip
 - Status chips:
-  - Empty: `text-[10px] text-muted-foreground border border-muted-foreground rounded px-1` — "empty"
-  - Occupied: `text-[10px] text-[hsl(38,85%,55%)] border border-[hsl(38,85%,55%)] rounded px-1` — "occupied" (amber — same as Phase 4 occupied bank warning)
+  - Empty: `text-xs text-muted-foreground border border-muted-foreground rounded px-1` — "empty"
+  - Occupied: `text-xs text-[hsl(38,85%,55%)] border border-[hsl(38,85%,55%)] rounded px-1` — "occupied" (amber — same as Phase 4 occupied bank warning)
 - Selected row: accent left border + `bg-[hsl(30,8%,20%)]`
 
 **Footer:**
-- "Cancel" (variant="ghost", font-mono text-xs)
+- "Close Picker" (variant="ghost", font-mono text-xs) — dismisses the dialog without assigning
 - "Assign to Slot" (variant="default", font-mono text-xs) — disabled until a slot row is selected → opens dry-run preview
 
 ### Success Banner (Reuse)
@@ -281,7 +285,7 @@ Existing click-on-row-body expands the detail view (crossRefs, health). Assign b
 | No query | All samples (up to 200) sorted by filename |
 | Active query | Filtered results update after 300ms debounce |
 | No results | Empty state: `"No samples match your search."` (font-mono text-xs text-muted-foreground, centered, py-8) |
-| Truncated results | Count indicator below list: `"Showing 200 of N — refine your search"` (text-[10px] text-muted-foreground) |
+| Truncated results | Count indicator below list: `"Showing 200 of N — refine your search"` (text-xs text-muted-foreground) |
 
 ### Slot Picker Dialog — Slot Selection
 
@@ -317,7 +321,8 @@ Existing click-on-row-body expands the detail view (crossRefs, health). Assign b
 | Hard block — incompatible format | "Unsupported format: OT accepts WAV and AIFF only. Convert this file first." |
 | Hard block — slot type mismatch | "This sample is too large for a Flex slot. Assign to Static instead." |
 | Slot type error redirect button | "Assign to Static #NNN" |
-| Slot type error cancel button | "Cancel" |
+| Slot type error dismiss button | "Dismiss" |
+| Slot picker dialog dismiss button | "Close Picker" |
 | Success banner — assign | "Assigned FILENAME to Flex #NNN — 18 files updated" |
 | Success banner — replace | "Replaced OLD_NAME → NEW_NAME in Static #NNN — 18 files updated" |
 | Success banner — Wallflower push | "Pushed FILENAME to Flex #NNN — 18 files updated · copied to /AUDIO/" |
@@ -330,7 +335,7 @@ Existing click-on-row-body expands the detail view (crossRefs, health). Assign b
 | Slot picker — occupied slot warning | "Slot NNN is occupied. Existing sample will be replaced." |
 | Cancel mid-operation | "Keep Going" / "Cancel Assignment" (matches Phase 3 BackupProgressView cancel pattern) |
 
-Source: Phase 5 CONTEXT.md decisions D-01 through D-14; Phase 3 D-10 (snapshot mention), D-13 (success banner); Phase 4 copywriting patterns.
+Source: Phase 5 CONTEXT.md decisions D-01 through D-14; Phase 3 D-10 (snapshot mention), D-13 (success banner); Phase 4 copywriting patterns. Revised: "Cancel" replaced with specific dismissal labels per checker D1 constraint.
 
 ---
 
