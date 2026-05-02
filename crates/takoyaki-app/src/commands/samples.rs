@@ -119,10 +119,7 @@ fn filename_from_path(path: &str) -> String {
 
 /// Return all 128 Flex and 128 Static sample slots for a project (BROW-04).
 ///
-/// Reads project.work via ot-parser. Until the Phase 1 parser for project.work
-/// is implemented, returns stub empty slot arrays.
-///
-/// Assumption guard A3: All path normalization goes through `normalize_ot_path()`.
+/// Parses [SAMPLE]...[/SAMPLE] sections from project.work (text INI format).
 #[tauri::command]
 #[specta::specta]
 pub async fn get_project_samples(
@@ -137,53 +134,136 @@ pub async fn get_project_samples(
 
     let project_dir = std::path::PathBuf::from(&card_path);
     let work_file = project_dir.join("project.work");
+    let strd_file = project_dir.join("project.strd");
 
-    tracing::debug!(
-        "get_project_samples: project_id={} card_path={} work_file_exists={}",
-        project_id,
-        card_path,
-        work_file.exists()
-    );
-
-    // FIXME: Phase 1 OT project.work parser not yet implemented.
-    // Return 128 empty slots for both Flex and Static until the parser is ready.
-    // When Phase 1 parser is available, read the slot table from project.work:
-    //   let data = std::fs::read(&work_file)?;
-    //   let project = ot_parser::ProjectFile::from_bytes(&data)?;
-    //   let flex = project.flex_sample_slots.iter().enumerate().map(|(i, slot)| { ... });
-    //   let static_slots = project.static_sample_slots.iter().enumerate().map(...);
-
-    // For each slot, log the first 5 raw paths so they are visible when real files are used.
-    // This satisfies the assumption guard A3 logging requirement.
-    let make_stub_slots = |count: u8| -> Vec<SampleSlot> {
-        (0..count)
-            .map(|slot_index| {
-                // Stub: demonstrate normalize_ot_path with an empty raw path
-                let raw: &[u8] = &[];
-                if slot_index < 5 {
-                    tracing::debug!(
-                        "normalize_ot_path stub: slot_index={} raw_bytes(first32)={:?} normalized={:?}",
-                        slot_index,
-                        &raw[..raw.len().min(32)],
-                        normalize_ot_path(raw)
-                    );
-                }
-                SampleSlot {
-                    slot_index,
-                    occupied: false,
-                    filename: None,
-                    full_path: None,
-                    sample_rate: None,
-                    status: "unknown".to_string(),
-                }
-            })
-            .collect()
+    let file_to_read = if work_file.exists() {
+        work_file
+    } else if strd_file.exists() {
+        strd_file
+    } else {
+        return Ok(SampleSlotResponse {
+            flex: make_empty_slots(128),
+            static_slots: make_empty_slots(128),
+        });
     };
 
-    Ok(SampleSlotResponse {
-        flex: make_stub_slots(128),
-        static_slots: make_stub_slots(128),
-    })
+    let content = std::fs::read_to_string(&file_to_read).map_err(AppError::from)?;
+    let parsed = parse_sample_slots(&content);
+
+    let mut flex: Vec<SampleSlot> = (0..128u8)
+        .map(|i| SampleSlot {
+            slot_index: i,
+            occupied: false,
+            filename: None,
+            full_path: None,
+            sample_rate: None,
+            status: "unknown".to_string(),
+        })
+        .collect();
+
+    let mut static_slots: Vec<SampleSlot> = (0..128u8)
+        .map(|i| SampleSlot {
+            slot_index: i,
+            occupied: false,
+            filename: None,
+            full_path: None,
+            sample_rate: None,
+            status: "unknown".to_string(),
+        })
+        .collect();
+
+    for entry in &parsed {
+        let slot_idx = entry.slot.saturating_sub(1); // OT slots are 1-based
+        if slot_idx >= 128 {
+            continue;
+        }
+        let path = entry.path.as_deref().filter(|p| !p.is_empty());
+        let occupied = path.is_some();
+        let full_path = path.map(|p| p.to_string());
+        let filename = full_path.as_deref().map(filename_from_path);
+
+        let slot = SampleSlot {
+            slot_index: slot_idx as u8,
+            occupied,
+            filename,
+            full_path,
+            sample_rate: None,
+            status: if occupied { "ok" } else { "unknown" }.to_string(),
+        };
+
+        match entry.slot_type.as_str() {
+            "FLEX" => flex[slot_idx as usize] = slot,
+            "STATIC" => static_slots[slot_idx as usize] = slot,
+            _ => {}
+        }
+    }
+
+    info!(
+        "get_project_samples: found {} flex, {} static occupied slots",
+        flex.iter().filter(|s| s.occupied).count(),
+        static_slots.iter().filter(|s| s.occupied).count(),
+    );
+
+    Ok(SampleSlotResponse { flex, static_slots })
+}
+
+fn make_empty_slots(count: u8) -> Vec<SampleSlot> {
+    (0..count)
+        .map(|i| SampleSlot {
+            slot_index: i,
+            occupied: false,
+            filename: None,
+            full_path: None,
+            sample_rate: None,
+            status: "unknown".to_string(),
+        })
+        .collect()
+}
+
+struct ParsedSampleEntry {
+    slot_type: String,
+    slot: u16,
+    path: Option<String>,
+}
+
+/// Parse [SAMPLE]...[/SAMPLE] blocks from OT project.work text content.
+fn parse_sample_slots(content: &str) -> Vec<ParsedSampleEntry> {
+    let mut results = Vec::new();
+    let mut in_sample_block = false;
+    let mut current_type = String::new();
+    let mut current_slot: u16 = 0;
+    let mut current_path: Option<String> = None;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed == "[SAMPLE]" {
+            in_sample_block = true;
+            current_type.clear();
+            current_slot = 0;
+            current_path = None;
+        } else if trimmed == "[/SAMPLE]" {
+            if in_sample_block && current_slot > 0 && !current_type.is_empty() {
+                results.push(ParsedSampleEntry {
+                    slot_type: current_type.clone(),
+                    slot: current_slot,
+                    path: current_path.take(),
+                });
+            }
+            in_sample_block = false;
+        } else if in_sample_block {
+            if let Some(val) = trimmed.strip_prefix("TYPE=") {
+                current_type = val.to_string();
+            } else if let Some(val) = trimmed.strip_prefix("SLOT=") {
+                current_slot = val.parse().unwrap_or(0);
+            } else if let Some(val) = trimmed.strip_prefix("PATH=") {
+                if !val.is_empty() {
+                    current_path = Some(val.to_string());
+                }
+            }
+        }
+    }
+
+    results
 }
 
 /// Build a `SampleSlot` from raw binary slot data.
@@ -538,6 +618,61 @@ pub async fn assign_sample(
         slot_index,
         filename,
     })
+}
+
+// ---------------------------------------------------------------------------
+// Phase Quick: Audio preview command
+// ---------------------------------------------------------------------------
+
+/// Return the raw bytes of an audio file (WAV/AIFF) from the mounted OT volume.
+///
+/// `sample_path` is the normalized OT path from `SampleSlot.full_path`
+/// (e.g., "AUDIO/Alb/Field/sample.WAV"). It is resolved relative to the
+/// OT volume root (card_path's grandparent) using `resolve_ot_path` for
+/// path traversal prevention.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_sample_audio_bytes(
+    state: tauri::State<'_, crate::AppState>,
+    project_id: String,
+    sample_path: String,
+) -> Result<Vec<u8>, AppError> {
+    // 1. Get card_path from DB (same pattern as get_project_samples)
+    let card_path = {
+        let db = state.db.lock().map_err(|e| AppError::Lock(e.to_string()))?;
+        db::projects::get_card_path(&db.conn, &project_id)
+            .map_err(|e| AppError::Database(e.to_string()))?
+    };
+
+    // 2. Derive the volume root from card_path.
+    //    card_path is like "/Volumes/OCTATRACK/SET1/Project01"
+    //    Volume root = project_dir.parent() (SET) .parent() (volume root)
+    let project_dir = PathBuf::from(&card_path);
+    let volume_root = project_dir
+        .parent() // SET directory
+        .and_then(|p| p.parent()) // Volume root
+        .ok_or_else(|| AppError::Io("Cannot determine volume root from project path".into()))?;
+
+    // 3. Strip leading ../ segments from sample_path (OT stores relative paths like ../AUDIO/...)
+    let cleaned_path = sample_path
+        .trim_start_matches("../")
+        .trim_start_matches("..\\");
+
+    // 4. Resolve the sample path safely using resolve_ot_path (traversal prevention)
+    let resolved = health::resolve_ot_path(volume_root, cleaned_path)
+        .ok_or_else(|| AppError::Io(format!("Cannot resolve sample path: {}", sample_path)))?;
+
+    // 5. Verify file exists
+    if !resolved.exists() {
+        return Err(AppError::Io(format!("Audio file not found: {}", resolved.display())));
+    }
+
+    // 6. Read file bytes (WAV/AIFF files are typically < 50MB for OT)
+    let bytes = std::fs::read(&resolved)
+        .map_err(|e| AppError::Io(format!("Failed to read audio file: {}", e)))?;
+
+    info!("Serving {} bytes for sample: {}", bytes.len(), resolved.display());
+    Ok(bytes)
 }
 
 // ---------------------------------------------------------------------------
