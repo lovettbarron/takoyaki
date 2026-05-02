@@ -108,7 +108,12 @@ Plans:
   2. The app validates Flex vs Static slot type correctness before assigning and blocks incompatible assignments with a clear error
   3. User can search the Wallflower sample library by key, BPM, and tags from within Takoyaki and push a selected sample to an OT slot
   4. When Wallflower is not installed or its database is unavailable, the Wallflower panel is hidden or shows a graceful "not connected" state — no crash, no error dialog
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+- [ ] 05-01-PLAN.md — Dependencies, V3 migration, and Rust sample assignment commands
+- [ ] 05-02-PLAN.md — Wallflower Rust backend and frontend TypeScript foundation
+- [ ] 05-03-PLAN.md — Frontend sample assignment flow with SlotRow and SamplesTab wiring
+- [ ] 05-04-PLAN.md — Frontend Wallflower panel, push-to-slot flow, and end-to-end verification
 **UI hint**: yes
 
 ## Progress
@@ -118,8 +123,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 6/7 | Executing | - |
-| 2. Read-Only Browser | 0/5 | Planning complete | - |
-| 3. Write Path and Backup | 0/4 | Planning complete | - |
-| 4. Advanced Management | 0/7 | Planning complete | - |
-| 5. Sample Assignment and Wallflower | 0/? | Not started | - |
+| 1. Foundation | 7/7 | Complete | - |
+| 2. Read-Only Browser | 5/5 | Complete | - |
+| 3. Write Path and Backup | 4/4 | Complete | - |
+| 4. Advanced Management | 7/7 | Complete | - |
+| 5. Sample Assignment and Wallflower | 0/4 | Planning complete | - |
