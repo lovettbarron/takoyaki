@@ -16,6 +16,12 @@ interface DryRunModalProps {
   manifest: FileChangeManifest | null;
   onApply: () => void;
   onCancel: () => void;
+  /** Optional label override for the apply button (defaults to "Back Up N files" or "Restore Snapshot") */
+  applyLabel?: string;
+  /** Whether the apply operation is in progress — disables the apply button */
+  isApplying?: boolean;
+  /** Soft warnings to display below the snapshot guarantee line */
+  softWarnings?: string[];
 }
 
 function formatFileSize(bytes: number): string {
@@ -60,7 +66,7 @@ function FileChangeRow({ entry }: { entry: FileChangeEntry }) {
   );
 }
 
-export function DryRunModal({ open, manifest, onApply, onCancel }: DryRunModalProps) {
+export function DryRunModal({ open, manifest, onApply, onCancel, applyLabel, isApplying, softWarnings }: DryRunModalProps) {
   if (!manifest) return null;
 
   const isBackup = manifest.operationLabel.startsWith("Back Up");
@@ -91,6 +97,17 @@ export function DryRunModal({ open, manifest, onApply, onCancel }: DryRunModalPr
         <div className="text-xs text-muted-foreground italic pb-2 border-b border-border">
           A snapshot of the current state will be created before applying.
         </div>
+
+        {/* Soft warnings (D-14 — non-ideal format like 48kHz/32-bit) */}
+        {softWarnings && softWarnings.length > 0 && (
+          <div className="flex flex-col gap-0.5 pb-2">
+            {softWarnings.map((warning, i) => (
+              <div key={i} className="text-xs text-[hsl(38,85%,55%)] italic py-1">
+                {warning}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Change summary strip */}
         <div className="flex gap-4 py-2 border-b border-border">
@@ -123,24 +140,36 @@ export function DryRunModal({ open, manifest, onApply, onCancel }: DryRunModalPr
             variant="ghost"
             className="font-mono text-xs"
             onClick={onCancel}
+            disabled={isApplying}
           >
             Don&apos;t Apply
           </Button>
-          {isBackup ? (
+          {applyLabel ? (
             <Button
               variant="default"
               className="font-mono text-xs"
               onClick={onApply}
+              disabled={isApplying}
             >
-              Back Up {applyCount} files
+              {isApplying ? "Applying…" : applyLabel}
+            </Button>
+          ) : isBackup ? (
+            <Button
+              variant="default"
+              className="font-mono text-xs"
+              onClick={onApply}
+              disabled={isApplying}
+            >
+              {isApplying ? "Applying…" : `Back Up ${applyCount} files`}
             </Button>
           ) : (
             <Button
               variant="destructive"
               className="font-mono text-xs"
               onClick={onApply}
+              disabled={isApplying}
             >
-              Restore Snapshot
+              {isApplying ? "Applying…" : "Restore Snapshot"}
             </Button>
           )}
         </DialogFooter>

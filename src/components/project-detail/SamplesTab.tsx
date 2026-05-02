@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CircleCheck, X } from "lucide-react";
+import { open } from "@tauri-apps/plugin-dialog";
 import { Toggle } from "@/components/ui/toggle";
-import { getProjectSamples, getProjectDetail } from "@/lib/tauri";
-import type { SampleSlot, BankDetail, HealthCheckComplete, HealthIssue } from "@/lib/types";
+import { getProjectSamples, getProjectDetail, computeSampleDryRun, assignSample } from "@/lib/tauri";
+import { useSamplesStore } from "@/lib/stores/samples";
+import { useDeviceStore } from "@/lib/stores/device";
+import { DryRunModal } from "@/components/backups/DryRunModal";
+import type { SampleSlot, BankDetail, HealthCheckComplete, HealthIssue, SampleDryRunResult } from "@/lib/types";
 import { SlotRow } from "./SlotRow";
 
 interface SamplesTabProps {
@@ -44,7 +49,7 @@ function useCrossRefs(projectId: string): BankDetail[] {
   return project?.banks ?? [];
 }
 
-/** Column header row matching SlotRow column layout */
+/** Column header row matching SlotRow column layout (with trailing assign column) */
 function SlotTableHeader() {
   return (
     <div className="flex h-8 items-center border-b border-[hsl(30,8%,26%)]">
@@ -60,6 +65,8 @@ function SlotTableHeader() {
       <span className="w-12 shrink-0 text-center font-mono text-xs font-semibold uppercase text-muted-foreground">
         STATUS
       </span>
+      {/* Trailing assign column — no label (icon-only column) */}
+      <span className="w-8 shrink-0" />
     </div>
   );
 }
@@ -70,29 +77,101 @@ interface SlotSectionProps {
   crossRefMap: Map<number, string[]>;
   slotType: "flex" | "static";
   healthIssues?: HealthIssue[];
+  onAssign?: (slotIndex: number, slotType: "flex" | "static") => void;
+  slotError: { slotIndex: number; slotType: "flex" | "static"; message: string } | null;
+  slotErrorRedirect: { label: string; targetSlotType: "flex" | "static"; targetSlotIndex: number } | null;
+  onSlotRedirect: () => void;
+  onDismissError: () => void;
 }
 
-function SlotSection({ slots, showEmpty, crossRefMap, slotType, healthIssues }: SlotSectionProps) {
+function SlotSection({
+  slots,
+  showEmpty,
+  crossRefMap,
+  slotType,
+  healthIssues,
+  onAssign,
+  slotError,
+  slotErrorRedirect,
+  onSlotRedirect,
+  onDismissError,
+}: SlotSectionProps) {
   const filtered = slots.filter((s) => showEmpty || s.occupied);
 
   return (
     <div className="w-full">
       <SlotTableHeader />
-      {filtered.map((slot) => (
-        <SlotRow
-          key={slot.slot_index}
-          slot={slot}
-          slotType={slotType}
-          crossRefs={crossRefMap.get(slot.slot_index)}
-          healthIssues={healthIssues}
-        />
-      ))}
+      {filtered.map((slot) => {
+        const isErrorSlot =
+          slotError?.slotIndex === slot.slot_index &&
+          slotError?.slotType === slotType;
+        return (
+          <SlotRow
+            key={slot.slot_index}
+            slot={slot}
+            slotType={slotType}
+            crossRefs={crossRefMap.get(slot.slot_index)}
+            healthIssues={healthIssues}
+            onAssign={onAssign}
+            assignError={isErrorSlot ? slotError!.message : null}
+            assignErrorRedirect={
+              isErrorSlot && slotErrorRedirect
+                ? { label: slotErrorRedirect.label, onRedirect: onSlotRedirect }
+                : isErrorSlot
+                ? { label: "Dismiss", onRedirect: onDismissError }
+                : null
+            }
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/** Simple inline success banner for sample assignment (separate from backup InlineSuccessBanner) */
+function AssignSuccessBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 bg-[hsl(140,30%,14%)] border-b border-[hsl(140,40%,28%)]">
+      <CircleCheck className="h-4 w-4 shrink-0 text-[hsl(140,60%,72%)]" />
+      <span className="font-mono text-xs text-[hsl(140,60%,72%)] flex-1">{message}</span>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="h-5 w-5 flex items-center justify-center text-[hsl(140,60%,72%)] hover:text-[hsl(140,60%,82%)]"
+        aria-label="Dismiss"
+      >
+        <X className="h-[14px] w-[14px]" />
+      </button>
     </div>
   );
 }
 
 export function SamplesTab({ projectId }: SamplesTabProps) {
   const [showEmpty, setShowEmpty] = useState(false);
+  const [dryRunOpen, setDryRunOpen] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const [pendingApplyLabel, setPendingApplyLabel] = useState<string>("Assign Sample");
+
+  const queryClient = useQueryClient();
+  const deviceConnected = useDeviceStore((s) => s.connected);
+
+  const {
+    dryRunManifest,
+    softWarnings,
+    successMessage,
+    pendingSlotType,
+    pendingSlotIndex,
+    pendingFilePath,
+    slotError,
+    slotErrorRedirect,
+    setAssignStatus,
+    setDryRunResult,
+    setPendingAssign,
+    setSlotError,
+    clearSlotError,
+    setSuccessMessage,
+    reset,
+  } = useSamplesStore();
 
   const { data: samples, isPending } = useQuery({
     queryKey: ["samples", projectId],
@@ -113,6 +192,137 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
   const flexSlots = samples?.flex ?? [];
   const staticSlots = samples?.static_slots ?? [];
 
+  // ── Assign flow handler (triggered by SlotRow assign button) ──
+  // T-05-11: Guard against concurrent assigns — return early when not idle
+  async function handleAssign(slotIndex: number, slotType: "flex" | "static") {
+    const currentStatus = useSamplesStore.getState().assignStatus;
+    if (currentStatus !== "idle") return;
+
+    clearSlotError();
+    setAssignStatus("picking-file");
+
+    // Open native macOS file picker per D-01
+    let filePath: string | null = null;
+    try {
+      const result = await open({
+        multiple: false,
+        filters: [{ name: "Audio", extensions: ["wav", "aif", "aiff"] }],
+      });
+      filePath = typeof result === "string" ? result : null;
+    } catch {
+      setAssignStatus("idle");
+      return;
+    }
+
+    if (!filePath) {
+      // User cancelled the file picker
+      setAssignStatus("idle");
+      return;
+    }
+
+    setAssignStatus("dry-running");
+
+    try {
+      const result: SampleDryRunResult = await computeSampleDryRun(
+        projectId,
+        slotType,
+        slotIndex,
+        filePath,
+      );
+
+      // D-14: Hard block — show inline error below the slot row, do NOT open dry-run modal
+      if (result.hard_block) {
+        setAssignStatus("idle");
+
+        // D-13: Slot type mismatch — offer redirect to equivalent slot in correct type
+        if (result.hard_block.toLowerCase().includes("flex")) {
+          setSlotError(slotIndex, slotType, result.hard_block, {
+            label: `Assign to Static #${String(slotIndex + 1).padStart(3, "0")}`,
+            targetSlotType: "static",
+            targetSlotIndex: slotIndex,
+          });
+        } else {
+          // Format error — no redirect per UI-SPEC
+          setSlotError(slotIndex, slotType, result.hard_block);
+        }
+        return;
+      }
+
+      // Determine apply button label based on whether slot is occupied
+      const isOccupied =
+        slotType === "flex"
+          ? (flexSlots[slotIndex]?.occupied ?? false)
+          : (staticSlots[slotIndex]?.occupied ?? false);
+      setPendingApplyLabel(isOccupied ? "Replace Sample" : "Assign Sample");
+
+      // Store dry-run result and open preview modal per D-03
+      setDryRunResult(result.manifest, null, result.soft_warnings ?? []);
+      setPendingAssign(slotType, slotIndex, filePath, false);
+      setDryRunOpen(true);
+    } catch (err) {
+      setAssignStatus("failed");
+      setSlotError(slotIndex, slotType, `Assignment failed: ${String(err)}`);
+    }
+  }
+
+  // ── Apply handler (DryRunModal "Assign Sample" / "Replace Sample" button) ──
+  async function handleApplyAssign() {
+    if (!pendingSlotType || pendingSlotIndex === null || !pendingFilePath) return;
+
+    setIsApplying(true);
+    setAssignStatus("assigning");
+
+    try {
+      const result = await assignSample(
+        projectId,
+        pendingSlotType,
+        pendingSlotIndex,
+        pendingFilePath,
+        false, // not from Wallflower — desktop file
+      );
+
+      setDryRunOpen(false);
+      setIsApplying(false);
+
+      // D-05: Success banner per Phase 3 pattern
+      const slotLabel = `${pendingSlotType === "flex" ? "Flex" : "Static"} #${String(pendingSlotIndex + 1).padStart(3, "0")}`;
+      setSuccessMessage(
+        `Assigned ${result.filename} to ${slotLabel} — ${result.files_written} files updated`,
+      );
+
+      // Invalidate samples cache so the slot list refreshes
+      queryClient.invalidateQueries({ queryKey: ["samples", projectId] });
+
+      // Auto-dismiss success after 4 seconds
+      setTimeout(() => reset(), 4000);
+    } catch (err) {
+      setIsApplying(false);
+      setDryRunOpen(false);
+      setAssignStatus("failed");
+      if (pendingSlotIndex !== null && pendingSlotType) {
+        setSlotError(
+          pendingSlotIndex,
+          pendingSlotType,
+          `Assignment failed: ${String(err)}`,
+        );
+      }
+    }
+  }
+
+  // ── Cancel handler ──
+  function handleCancelAssign() {
+    setDryRunOpen(false);
+    setIsApplying(false);
+    reset();
+  }
+
+  // ── Redirect handler for D-13 slot type mismatch ──
+  function handleSlotRedirect() {
+    if (!slotErrorRedirect) return;
+    clearSlotError();
+    handleAssign(slotErrorRedirect.targetSlotIndex, slotErrorRedirect.targetSlotType);
+  }
+
   const hasAnyPopulated =
     flexSlots.some((s) => s.occupied) ||
     staticSlots.some((s) => s.occupied);
@@ -127,8 +337,19 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
     );
   }
 
+  // onAssign only provided when device is connected (disables buttons otherwise)
+  const assignHandler = deviceConnected ? handleAssign : undefined;
+
   return (
     <div className="flex flex-col">
+      {/* D-05: Success banner — auto-dismissing after 4 seconds */}
+      {successMessage && (
+        <AssignSuccessBanner
+          message={successMessage}
+          onDismiss={() => reset()}
+        />
+      )}
+
       {/* Top-right: Show all slots toggle */}
       <div className="flex justify-end px-4 pt-3 pb-1">
         <Toggle
@@ -152,6 +373,11 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
           crossRefMap={crossRefMap}
           slotType="flex"
           healthIssues={healthData?.issues}
+          onAssign={assignHandler}
+          slotError={slotError}
+          slotErrorRedirect={slotErrorRedirect}
+          onSlotRedirect={handleSlotRedirect}
+          onDismissError={clearSlotError}
         />
 
         {/* STATIC SAMPLES section */}
@@ -164,8 +390,24 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
           crossRefMap={crossRefMap}
           slotType="static"
           healthIssues={healthData?.issues}
+          onAssign={assignHandler}
+          slotError={slotError}
+          slotErrorRedirect={slotErrorRedirect}
+          onSlotRedirect={handleSlotRedirect}
+          onDismissError={clearSlotError}
         />
       </div>
+
+      {/* Dry-run preview modal per D-03, D-04 */}
+      <DryRunModal
+        open={dryRunOpen}
+        manifest={dryRunManifest}
+        onApply={handleApplyAssign}
+        onCancel={handleCancelAssign}
+        applyLabel={pendingApplyLabel}
+        isApplying={isApplying}
+        softWarnings={softWarnings}
+      />
     </div>
   );
 }
