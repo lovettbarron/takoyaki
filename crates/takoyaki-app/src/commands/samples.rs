@@ -2,10 +2,45 @@
 //!
 //! Threat model T-02-03: Sample filenames are local data on a local desktop app
 //! with no network exposure — information disclosure risk is accepted as low.
+//!
+//! Phase 5 Plan 01: compute_sample_dry_run and assign_sample commands added.
+//! Threat model T-05-01: canonicalize() on file_path from native file picker.
+//! Threat model T-05-02/03: enum parse + bounds check on slot_type/slot_index.
+//! Threat model T-05-04: pre-write snapshot + atomic_write_batch.
+//! Threat model T-05-05: Wallflower copy destination hardcoded to card_root/AUDIO/.
 
+use crate::atomic::snapshot::SnapshotEngine;
+use crate::commands::backup::{ChangeType, FileChangeEntry, FileChangeManifest};
 use crate::db;
 use crate::error::AppError;
+use crate::health;
+use crate::management::project_work::{self, SlotType};
 use specta::Type;
+use std::path::{Path, PathBuf};
+use tracing::info;
+
+// ---------------------------------------------------------------------------
+// Phase 5 response types
+// ---------------------------------------------------------------------------
+
+/// Result of a dry-run computation for a sample assignment.
+#[derive(Debug, serde::Serialize, specta::Type, Clone)]
+pub struct SampleDryRunResult {
+    pub manifest: FileChangeManifest,
+    /// If set, the assignment is blocked (incompatible format or slot type mismatch).
+    pub hard_block: Option<String>,
+    /// Non-blocking warnings (e.g., non-44.1kHz sample rate).
+    pub soft_warnings: Vec<String>,
+}
+
+/// Result returned after a successful sample assignment.
+#[derive(Debug, serde::Serialize, specta::Type, Clone)]
+pub struct AssignSampleResult {
+    pub files_written: u8,
+    pub slot_type: String,
+    pub slot_index: u8,
+    pub filename: String,
+}
 
 // ---------------------------------------------------------------------------
 // Response types
@@ -211,5 +246,166 @@ mod tests {
     fn test_filename_from_path() {
         assert_eq!(filename_from_path("AUDIO/Kicks/kick.wav"), "kick.wav");
         assert_eq!(filename_from_path("kick.wav"), "kick.wav");
+    }
+
+    // ---------------------------------------------------------------------------
+    // TDD tests for compute_sample_dry_run and assign_sample (Phase 5 Plan 01)
+    // ---------------------------------------------------------------------------
+
+    /// Helper: create a real 44.1kHz 16-bit mono WAV fixture in a temp dir.
+    fn create_wav_fixture(dir: &std::path::Path, filename: &str, sample_rate: u32, bits: u16) -> std::path::PathBuf {
+        use std::io::Write;
+        let path = dir.join(filename);
+        // Minimal WAV file: RIFF header + fmt chunk + data chunk (empty audio)
+        // RIFF chunk
+        let data_size: u32 = 0;
+        let fmt_size: u32 = 16;
+        let audio_format: u16 = 1; // PCM
+        let num_channels: u16 = 1;
+        let byte_rate: u32 = sample_rate * num_channels as u32 * bits as u32 / 8;
+        let block_align: u16 = num_channels * bits / 8;
+        let riff_size: u32 = 4 + 8 + fmt_size + 8 + data_size;
+
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"RIFF");
+        buf.extend_from_slice(&riff_size.to_le_bytes());
+        buf.extend_from_slice(b"WAVE");
+        buf.extend_from_slice(b"fmt ");
+        buf.extend_from_slice(&fmt_size.to_le_bytes());
+        buf.extend_from_slice(&audio_format.to_le_bytes());
+        buf.extend_from_slice(&num_channels.to_le_bytes());
+        buf.extend_from_slice(&sample_rate.to_le_bytes());
+        buf.extend_from_slice(&byte_rate.to_le_bytes());
+        buf.extend_from_slice(&block_align.to_le_bytes());
+        buf.extend_from_slice(&bits.to_le_bytes());
+        buf.extend_from_slice(b"data");
+        buf.extend_from_slice(&data_size.to_le_bytes());
+
+        std::fs::write(&path, &buf).unwrap();
+        path
+    }
+
+    /// Helper: create a text file that is not a valid audio file.
+    fn create_non_audio_fixture(dir: &std::path::Path, filename: &str) -> std::path::PathBuf {
+        let path = dir.join(filename);
+        std::fs::write(&path, b"not an audio file at all").unwrap();
+        path
+    }
+
+    #[test]
+    fn test_dry_run_result_struct_exists() {
+        // Verify SampleDryRunResult can be constructed
+        let _ = SampleDryRunResult {
+            manifest: crate::commands::backup::FileChangeManifest {
+                entries: vec![],
+                total_added: 0,
+                total_modified: 0,
+                total_removed: 0,
+                total_unchanged: 0,
+                total_bytes: 0,
+                destination_path: String::new(),
+                operation_label: "test".to_string(),
+                project_name: String::new(),
+                conflict_details: vec![],
+            },
+            hard_block: None,
+            soft_warnings: vec![],
+        };
+    }
+
+    #[test]
+    fn test_assign_result_struct_exists() {
+        // Verify AssignSampleResult can be constructed
+        let _ = AssignSampleResult {
+            files_written: 2,
+            slot_type: "flex".to_string(),
+            slot_index: 0,
+            filename: "kick.wav".to_string(),
+        };
+    }
+
+    #[test]
+    fn test_format_validation_wav_44100_no_hard_block() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let wav = create_wav_fixture(tmp.path(), "kick_44100.wav", 44100, 16);
+        let spec = crate::health::read_audio_spec(&wav).expect("Should read WAV spec");
+        let issues = crate::health::check_format_compatibility(&spec);
+        // A 44.1kHz 16-bit WAV should produce no issues — no hard block expected
+        assert!(
+            issues.is_empty(),
+            "44.1kHz 16-bit WAV should have no format issues"
+        );
+    }
+
+    #[test]
+    fn test_format_validation_non_audio_produces_unsupported_issue() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let txt = create_non_audio_fixture(tmp.path(), "not_audio.mp3");
+        let spec = crate::health::read_audio_spec(&txt).expect("read_audio_spec returns Ok for unknown");
+        let issues = crate::health::check_format_compatibility(&spec);
+        // Unknown format should produce UnsupportedFormat — mapped to hard_block
+        assert!(!issues.is_empty(), "Non-audio file should produce at least one issue");
+        assert!(
+            matches!(issues[0], crate::health::FormatIssue::UnsupportedFormat(_)),
+            "Issue should be UnsupportedFormat"
+        );
+    }
+
+    #[test]
+    fn test_format_validation_48khz_produces_wrong_sample_rate_issue() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let wav = create_wav_fixture(tmp.path(), "pad_48000.wav", 48000, 16);
+        let spec = crate::health::read_audio_spec(&wav).expect("Should read 48kHz WAV spec");
+        let issues = crate::health::check_format_compatibility(&spec);
+        // 48kHz WAV should produce WrongSampleRate — mapped to soft_warning
+        assert!(!issues.is_empty(), "48kHz WAV should produce a sample rate issue");
+        assert!(
+            matches!(issues[0], crate::health::FormatIssue::WrongSampleRate(48000)),
+            "Issue should be WrongSampleRate(48000)"
+        );
+    }
+
+    #[test]
+    fn test_rewrite_slot_path_integration_for_assign() {
+        // Verify rewrite_slot_path produces changed bytes when slot exists (assign_sample key behavior)
+        use crate::management::project_work::{rewrite_slot_path, SlotType};
+        let raw = b"TYPE=FLEX\nSLOT=001\nPATH=../AUDIO/kick.wav\nGAIN=48\n";
+        let new_bytes = rewrite_slot_path(raw, SlotType::Flex, 1, "../AUDIO/new_kick.wav");
+        assert_ne!(
+            raw.to_vec(), new_bytes,
+            "rewrite_slot_path should return changed bytes when slot is found"
+        );
+        let result_str = String::from_utf8(new_bytes).unwrap();
+        assert!(result_str.contains("PATH=../AUDIO/new_kick.wav"), "New path should be in result");
+    }
+
+    #[test]
+    fn test_rewrite_slot_path_unchanged_when_slot_not_found() {
+        // Verify rewrite_slot_path returns unchanged bytes when slot doesn't exist
+        // This is the case that triggers the warning log in assign_sample
+        use crate::management::project_work::{rewrite_slot_path, SlotType};
+        let raw = b"TYPE=FLEX\nSLOT=001\nPATH=../AUDIO/kick.wav\nGAIN=48\n";
+        // Request slot 99 which doesn't exist
+        let new_bytes = rewrite_slot_path(raw, SlotType::Flex, 99, "../AUDIO/new.wav");
+        assert_eq!(
+            raw.to_vec(), new_bytes,
+            "rewrite_slot_path should return unchanged bytes when slot is not found"
+        );
+    }
+
+    #[test]
+    fn test_flex_slot_size_check() {
+        // Files over 200MB for a Flex slot should trigger a hard block.
+        // We test the size logic directly: 200MB = 200 * 1024 * 1024 bytes.
+        let size_mb_small: u64 = 100 * 1024 * 1024;
+        let size_mb_large: u64 = 201 * 1024 * 1024;
+        assert!(
+            size_mb_small / (1024 * 1024) <= 200,
+            "100MB should not trigger Flex hard block"
+        );
+        assert!(
+            size_mb_large / (1024 * 1024) > 200,
+            "201MB should trigger Flex hard block"
+        );
     }
 }

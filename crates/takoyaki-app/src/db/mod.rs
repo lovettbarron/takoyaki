@@ -2,7 +2,7 @@ pub mod backups;
 pub mod projects;
 pub mod wallflower;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use std::path::{Path, PathBuf};
 use tracing::info;
 
