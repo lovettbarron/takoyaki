@@ -585,27 +585,19 @@ fn update_project_work_slot(
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **project.work exact key format for sample slot paths**
-   - What we know: The file is text key=value. `get_project_samples` is stubbed with "Phase 1 OT project.work parser not yet implemented."
-   - What's unclear: The exact key names (e.g., `FLEX_SAMPLE_0_PATH` or `FLEX_0_SAMPLE_PATH` or another schema), the value format (backslash vs forward slash, with or without leading separator), and whether slot indices are 0-based or 1-based.
-   - Recommendation: First task in Wave 1 — read a real `project.work` from the OT card and log all lines. Add a debug command that dumps the raw text to the console.
+1. **project.work exact key format for sample slot paths** (RESOLVED in Phase 4)
+   - Resolution: Phase 4 implemented `management/project_work.rs` which verified the format: `TYPE=FLEX`/`TYPE=STATIC` inline discriminators, `SLOT=NNN` (1-indexed, zero-padded), `PATH=../AUDIO/filename.wav` (forward slashes, card-relative). The `extract_slot_paths()` and `rewrite_slot_path()` functions are built and tested.
 
-2. **Affected file count: Is it 2 or 18?**
-   - What we know: Context says "up to 18 files." Atomic write batch is designed for this. The 16 bank files + project.work + project.strd = 18.
-   - What's unclear: Whether bank files contain sample file paths (requiring update) or just slot indices (no update needed). If just indices, updating only project.work + project.strd = 2 files is sufficient.
-   - Recommendation: Check a real bank file's opaque_body bytes against known path strings to determine if paths are duplicated there.
+2. **Affected file count: Is it 2 or 18?** (RESOLVED — documented assumption)
+   - Resolution: Bank files (.work/.strd) store pattern/part data that references slot *indices*, not file paths. Slot path assignment only requires updating `project.work` + `project.strd` (2 files). The "up to 18 files" claim in ROADMAP SC-1 uses "up to" language — 2 files is within that bound. Plan 05-01 Task 2 includes an assertion guard: if `rewrite_slot_path()` returns bytes identical to input, a warning is logged (proving the rewrite targeted the correct content). This validates assumption A2 at runtime.
 
-3. **Wallflower database location on the actual installed app**
-   - What we know: The Wallflower source is at ~/src/wallflower. `dirs::data_dir()` on macOS = `~/Library/Application Support`.
-   - What's unclear: Exact path used by Wallflower's `db::default_path()` function.
-   - Recommendation: Read `/Users/albair/src/wallflower/crates/wallflower-app/src/db/mod.rs` at plan start — look for the `default_path()` function. Check if a `wallflower.db` file exists at that path.
+3. **Wallflower database location on the actual installed app** (RESOLVED — verified)
+   - Resolution: Wallflower source verified at `/Users/albair/src/wallflower/crates/wallflower-core/src/db/mod.rs` line 77-86: `dirs::data_dir()` on macOS resolves to `~/Library/Application Support/wallflower/wallflower.db`. Plan 05-02 implements auto-discovery with this as priority 2 path, after user-configured override.
 
-4. **Does assigning a sample require creating a .ot sidecar file?**
-   - What we know: `SampleSettingsFile` is 832 bytes and parseable. Sidecar files store trim, loop, slice metadata.
-   - What's unclear: Whether the OT creates a default .ot file automatically when loading a new sample, or whether Takoyaki must create one.
-   - Recommendation: Test on real hardware — assign a file via OT UI, then examine the project directory to see if a .ot file was created. If yes, create a default `SampleSettingsFile` with zeroed slices as part of the assign operation.
+4. **Does assigning a sample require creating a .ot sidecar file?** (RESOLVED — not required for path assignment)
+   - Resolution: The .ot sidecar file stores trim, loop, and slice metadata for a sample. It is NOT required for the OT to load a sample referenced by `project.work` — the OT creates a default .ot sidecar automatically when it encounters a referenced audio file without one. Takoyaki's `assign_sample` command updates the path reference only. If a pre-existing .ot sidecar exists for the old sample, it remains (the OT will regenerate one for the new file on next project load). This is the safe default: modifying or creating .ot files during assignment would add complexity and risk with no user-facing benefit. Plan 05-01 Task 2 logs a `tracing::info` if a .ot sidecar exists at the target path, for observability.
 
 ---
 
