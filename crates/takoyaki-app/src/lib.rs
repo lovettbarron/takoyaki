@@ -49,6 +49,8 @@ pub fn run() {
         commands::management::rename_project,
         commands::management::export_project,
         commands::management::copy_bank,
+        commands::samples::compute_sample_dry_run,
+        commands::samples::assign_sample,
     ]);
 
     #[cfg(debug_assertions)]
@@ -69,6 +71,7 @@ pub fn run() {
     };
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             device::start_polling(app.handle().clone());
 
