@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CircleCheck, X } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Toggle } from "@/components/ui/toggle";
-import { getProjectSamples, getProjectDetail, computeSampleDryRun, assignSample } from "@/lib/tauri";
+import { getProjectSamples, getProjectDetail, computeSampleDryRun, assignSample, getWallflowerStatus } from "@/lib/tauri";
 import { useSamplesStore } from "@/lib/stores/samples";
 import { useDeviceStore } from "@/lib/stores/device";
 import { DryRunModal } from "@/components/backups/DryRunModal";
-import type { SampleSlot, BankDetail, HealthCheckComplete, HealthIssue, SampleDryRunResult } from "@/lib/types";
+import type { SampleSlot, BankDetail, HealthCheckComplete, HealthIssue, SampleDryRunResult, WallflowerSample } from "@/lib/types";
 import { SlotRow } from "./SlotRow";
+import { WallflowerPanel } from "./WallflowerPanel";
+import { SlotPickerDialog } from "./SlotPickerDialog";
 
 interface SamplesTabProps {
   projectId: string;
@@ -162,16 +164,35 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
     pendingSlotType,
     pendingSlotIndex,
     pendingFilePath,
+    pendingFromWallflower,
     slotError,
     slotErrorRedirect,
+    wallflowerConnected,
+    slotPickerOpen,
+    slotPickerSampleFilename,
+    slotPickerSampleFilePath,
     setAssignStatus,
     setDryRunResult,
     setPendingAssign,
     setSlotError,
     clearSlotError,
     setSuccessMessage,
+    setWallflowerConnected,
+    openSlotPicker,
+    closeSlotPicker,
     reset,
   } = useSamplesStore();
+
+  // Check Wallflower connection status on mount (D-07: panel hidden when unavailable)
+  useEffect(() => {
+    getWallflowerStatus()
+      .then((status) => {
+        setWallflowerConnected(status.connected, status.db_path);
+      })
+      .catch(() => {
+        setWallflowerConnected(false);
+      });
+  }, [setWallflowerConnected]);
 
   const { data: samples, isPending } = useQuery({
     queryKey: ["samples", projectId],
@@ -278,17 +299,18 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
         pendingSlotType,
         pendingSlotIndex,
         pendingFilePath,
-        false, // not from Wallflower — desktop file
+        pendingFromWallflower, // true for Wallflower push (copies file to /AUDIO/), false for desktop
       );
 
       setDryRunOpen(false);
       setIsApplying(false);
 
-      // D-05: Success banner per Phase 3 pattern
+      // D-05: Success banner — distinct message for Wallflower push vs desktop assign
       const slotLabel = `${pendingSlotType === "flex" ? "Flex" : "Static"} #${String(pendingSlotIndex + 1).padStart(3, "0")}`;
-      setSuccessMessage(
-        `Assigned ${result.filename} to ${slotLabel} — ${result.files_written} files updated`,
-      );
+      const bannerMessage = pendingFromWallflower
+        ? `Pushed ${result.filename} to ${slotLabel} — ${result.files_written} files updated · copied to /AUDIO/`
+        : `Assigned ${result.filename} to ${slotLabel} — ${result.files_written} files updated`;
+      setSuccessMessage(bannerMessage);
 
       // Invalidate samples cache so the slot list refreshes
       queryClient.invalidateQueries({ queryKey: ["samples", projectId] });
@@ -306,6 +328,48 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
           `Assignment failed: ${String(err)}`,
         );
       }
+    }
+  }
+
+  // ── Push-to-slot flow (Wallflower sample -> slot picker -> dry-run -> assign) ──
+  function handlePushToSlot(sample: WallflowerSample) {
+    openSlotPicker(sample.filename, sample.file_path);
+  }
+
+  async function handleSlotPickerConfirm(slotType: "flex" | "static", slotIndex: number) {
+    if (!slotPickerSampleFilePath) return;
+    closeSlotPicker();
+
+    // Run through the same dry-run flow as desktop assignment, but with fromWallflower=true
+    clearSlotError();
+    setAssignStatus("dry-running");
+
+    try {
+      const result: SampleDryRunResult = await computeSampleDryRun(
+        projectId,
+        slotType,
+        slotIndex,
+        slotPickerSampleFilePath,
+      );
+
+      if (result.hard_block) {
+        setAssignStatus("idle");
+        setSlotError(slotIndex, slotType, result.hard_block);
+        return;
+      }
+
+      // Determine apply button label based on whether slot is occupied
+      const isOccupied =
+        slotType === "flex"
+          ? (flexSlots[slotIndex]?.occupied ?? false)
+          : (staticSlots[slotIndex]?.occupied ?? false);
+      setPendingApplyLabel(isOccupied ? "Replace Sample" : "Assign Sample");
+
+      setDryRunResult(result.manifest, null, result.soft_warnings ?? []);
+      setPendingAssign(slotType, slotIndex, slotPickerSampleFilePath, true); // fromWallflower = true
+      setDryRunOpen(true);
+    } catch (err) {
+      setAssignStatus("failed");
     }
   }
 
@@ -398,6 +462,13 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
         />
       </div>
 
+      {/* D-07: Wallflower panel — hidden entirely when DB unavailable */}
+      {wallflowerConnected && (
+        <div className="px-4">
+          <WallflowerPanel onPushToSlot={handlePushToSlot} />
+        </div>
+      )}
+
       {/* Dry-run preview modal per D-03, D-04 */}
       <DryRunModal
         open={dryRunOpen}
@@ -407,6 +478,15 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
         applyLabel={pendingApplyLabel}
         isApplying={isApplying}
         softWarnings={softWarnings}
+      />
+
+      {/* Slot Picker Dialog for push-to-slot flow per D-10 */}
+      <SlotPickerDialog
+        open={slotPickerOpen}
+        sampleFilename={slotPickerSampleFilename ?? ""}
+        slots={samples}
+        onConfirm={handleSlotPickerConfirm}
+        onCancel={closeSlotPicker}
       />
     </div>
   );
