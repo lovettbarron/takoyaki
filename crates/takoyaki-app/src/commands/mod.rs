@@ -4,3 +4,4 @@ pub mod health;
 pub mod management;
 pub mod projects;
 pub mod samples;
+pub mod wallflower;

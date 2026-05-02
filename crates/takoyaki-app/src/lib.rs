@@ -51,6 +51,9 @@ pub fn run() {
         commands::management::copy_bank,
         commands::samples::compute_sample_dry_run,
         commands::samples::assign_sample,
+        commands::wallflower::get_wallflower_status,
+        commands::wallflower::search_wallflower_samples,
+        commands::wallflower::set_wallflower_db_path,
     ]);
 
     #[cfg(debug_assertions)]
