@@ -186,12 +186,12 @@ mod tests {
     }
 
     #[test]
-    fn test_user_version_is_2() {
+    fn test_user_version_is_3() {
         let conn = open_in_memory().unwrap();
         let version: i32 = conn
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .unwrap();
-        assert_eq!(version, 2, "PRAGMA user_version must be 2 after V2 migration");
+        assert_eq!(version, 3, "PRAGMA user_version must be 3 after V3 migration");
     }
 
     #[test]
