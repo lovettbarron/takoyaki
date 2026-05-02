@@ -49,6 +49,8 @@ pub fn run() {
         commands::management::rename_project,
         commands::management::export_project,
         commands::management::copy_bank,
+        commands::samples::compute_sample_dry_run,
+        commands::samples::assign_sample,
     ]);
 
     #[cfg(debug_assertions)]
