@@ -149,3 +149,36 @@ export interface ConflictEntry {
   target_hash: string;
   resolution: ConflictResolution | null;
 }
+
+// ── Phase 5: Sample Assignment & Wallflower ─────────────────────────────
+
+export interface SampleDryRunResult {
+  manifest: FileChangeManifest;
+  hard_block: string | null;
+  soft_warnings: string[];
+}
+
+export interface AssignSampleResult {
+  files_written: number;
+  slot_type: string;
+  slot_index: number;
+  filename: string;
+}
+
+export interface WallflowerStatus {
+  connected: boolean;
+  db_path: string | null;
+  sample_count: number | null;
+}
+
+export interface WallflowerSample {
+  id: number;
+  filename: string;
+  file_path: string;
+  sample_rate: number | null;
+  bit_depth: number | null;
+  bpm: number | null;
+  key_name: string | null;
+  scale: string | null;
+  tags: string[];
+}
