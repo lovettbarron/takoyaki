@@ -201,9 +201,13 @@ export async function setWallflowerDbPath(path: string): Promise<WallflowerStatu
 
 // ── Audio Preview IPC ─────────────────────────────────────────────────────
 
-export async function getSampleAudioBytes(
+export async function playSample(
   projectId: string,
   samplePath: string
-): Promise<number[]> {
-  return invoke("get_sample_audio_bytes", { projectId, samplePath });
+): Promise<void> {
+  return invoke("play_sample", { projectId, samplePath });
+}
+
+export async function stopSample(): Promise<void> {
+  return invoke("stop_sample");
 }

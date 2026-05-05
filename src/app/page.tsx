@@ -22,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   confirmDevice,
   dismissDevice,
+  indexOtProjects,
   computeDryRun,
   backupProject,
   restoreSnapshot,
@@ -108,10 +109,13 @@ export default function Home() {
     }
   }, [confirmed]);
 
-  // Fetch project list when device is confirmed (for BankCopyPickerDialog)
+  // Index and fetch project list when device is confirmed
   useEffect(() => {
     if (confirmed) {
-      listProjects({}).then(setProjectList).catch(() => {});
+      indexOtProjects()
+        .then(() => listProjects({}))
+        .then(setProjectList)
+        .catch(() => {});
     }
   }, [confirmed]);
 

@@ -13,7 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProjectRow } from "./ProjectRow";
 import { ProjectSearchBar } from "./ProjectSearchBar";
-import { listProjects } from "@/lib/tauri";
+import { indexOtProjects, listProjects } from "@/lib/tauri";
 import { useFilterStore } from "@/lib/stores/navigation";
 import type { ProjectSummary } from "@/lib/types";
 
@@ -76,7 +76,10 @@ export function ProjectTable() {
 
   const { data, isPending } = useQuery({
     queryKey: ["projects", filter],
-    queryFn: () => listProjects(filter),
+    queryFn: async () => {
+      await indexOtProjects();
+      return listProjects(filter);
+    },
   });
 
   const sortedData = useMemo(() => {

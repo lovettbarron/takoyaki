@@ -249,14 +249,6 @@ pub async fn index_ot_projects(
         device.mount_point.clone().ok_or_else(|| AppError::Device("No OT volume mounted".to_string()))?
     };
 
-    let sets_dir = volume_path.join("SETS");
-    if !sets_dir.exists() {
-        return Err(AppError::Io(format!(
-            "SETS directory not found at {}",
-            sets_dir.display()
-        )));
-    }
-
     // Clear existing index before re-populating
     {
         let db = state.db.lock().map_err(|e| AppError::Lock(e.to_string()))?;
@@ -266,92 +258,130 @@ pub async fn index_ot_projects(
 
     let mut count = 0usize;
 
-    for set_entry in std::fs::read_dir(&sets_dir).map_err(AppError::from)? {
-        let set_dir = set_entry.map_err(AppError::from)?.path();
-        if !set_dir.is_dir() {
+    // Collect all Set directories to scan. The OT volume layout varies:
+    // 1. Classic: volume/SETS/SetName/ProjectName/project.strd
+    // 2. PRESETS at root: volume/PRESETS/SetName/project.strd (Set IS the project)
+    // 3. Root-level Set folders: volume/SetName/project.strd
+    let mut set_dirs: Vec<(String, std::path::PathBuf)> = Vec::new();
+
+    // Classic SETS layout
+    let sets_dir = volume_path.join("SETS");
+    if sets_dir.is_dir() {
+        for entry in std::fs::read_dir(&sets_dir).map_err(AppError::from)? {
+            let path = entry.map_err(AppError::from)?.path();
+            if path.is_dir() {
+                let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                set_dirs.push((name, path));
+            }
+        }
+    }
+
+    // PRESETS directory (common on real OT cards)
+    let presets_dir = volume_path.join("PRESETS");
+    if presets_dir.is_dir() {
+        for entry in std::fs::read_dir(&presets_dir).map_err(AppError::from)? {
+            let path = entry.map_err(AppError::from)?.path();
+            if path.is_dir() {
+                let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                set_dirs.push((name, path));
+            }
+        }
+    }
+
+    // Root-level directories that contain project files directly
+    for entry in std::fs::read_dir(&volume_path).map_err(AppError::from)? {
+        let path = entry.map_err(AppError::from)?.path();
+        if !path.is_dir() {
             continue;
         }
-        let set_name = set_dir
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_default();
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        // Skip dirs we already handle and system dirs
+        if name == "SETS" || name == "PRESETS" || name == "System Volume Information" {
+            continue;
+        }
+        // Only include if it has OT project files
+        if path.join("project.strd").is_file() || path.join("project.work").is_file() {
+            set_dirs.push((name, path));
+        }
+    }
 
-        for project_entry in std::fs::read_dir(&set_dir).map_err(AppError::from)? {
-            let project_dir = project_entry.map_err(AppError::from)?.path();
-            if !project_dir.is_dir() {
-                continue;
+    for (set_name, set_dir) in &set_dirs {
+        // A Set folder may itself be a project (contains project.strd directly)
+        // or may contain sub-project directories.
+        if set_dir.join("project.strd").is_file() || set_dir.join("project.work").is_file() {
+            // The Set folder IS a project
+            if let Some(row) = index_project_dir(set_name, set_name, set_dir) {
+                let db = state.db.lock().map_err(|e| AppError::Lock(e.to_string()))?;
+                db::projects::upsert_project(&db.conn, &row)
+                    .map_err(|e| AppError::Database(e.to_string()))?;
+                count += 1;
             }
-            let project_name = project_dir
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default();
+        } else {
+            // Set folder contains sub-project directories
+            if let Ok(entries) = std::fs::read_dir(set_dir) {
+                for project_entry in entries.flatten() {
+                    let project_dir = project_entry.path();
+                    if !project_dir.is_dir() {
+                        continue;
+                    }
+                    let project_name = project_dir
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default();
 
-            // Assumption guard (Open Question 3): try .work first, fall back to .strd
-            let work_file = project_dir.join("project.work");
-            let strd_file = project_dir.join("project.strd");
-            let project_file = if work_file.exists() {
-                info!("index_ot_projects: using project.work for {}/{}", set_name, project_name);
-                work_file
-            } else if strd_file.exists() {
-                info!(
-                    "index_ot_projects: project.work missing, using project.strd for {}/{}",
-                    set_name, project_name
-                );
-                strd_file
-            } else {
-                tracing::warn!(
-                    "index_ot_projects: no project.work or project.strd in {}",
-                    project_dir.display()
-                );
-                continue;
-            };
-
-            // FIXME: Phase 1 OT project.work parser not yet implemented.
-            // For now, record a project row with minimal metadata (name + path).
-            // When Phase 1 parser is ready, parse project_file to extract tempo and bank count.
-            let last_modified = project_dir
-                .metadata()
-                .ok()
-                .and_then(|m| m.modified().ok())
-                .map(|t| {
-                    let secs = t
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_secs();
-                    format_unix_timestamp(secs)
-                });
-
-            // Stub tempo and bank_count — Phase 1 parser will fill these from binary data.
-            let tempo_bpm: Option<f32> = None;
-            let bank_count: Option<u8> = None;
-
-            let row = db::projects::ProjectRow {
-                id: generate_project_id(&project_dir),
-                set_name: set_name.clone(),
-                project_name: project_name.clone(),
-                card_path: project_dir.to_string_lossy().into_owned(),
-                tempo_bpm,
-                bank_count,
-                last_modified,
-            };
-
-            let db = state.db.lock().map_err(|e| AppError::Lock(e.to_string()))?;
-            db::projects::upsert_project(&db.conn, &row)
-                .map_err(|e| AppError::Database(e.to_string()))?;
-            drop(db);
-
-            tracing::debug!(
-                "index_ot_projects: indexed {}/{} from {}",
-                set_name,
-                project_name,
-                project_file.display()
-            );
-            count += 1;
+                    if let Some(row) = index_project_dir(set_name, &project_name, &project_dir) {
+                        let db = state.db.lock().map_err(|e| AppError::Lock(e.to_string()))?;
+                        db::projects::upsert_project(&db.conn, &row)
+                            .map_err(|e| AppError::Database(e.to_string()))?;
+                        count += 1;
+                    }
+                }
+            }
         }
     }
 
     info!("index_ot_projects: indexed {} projects from {}", count, volume_path.display());
     Ok(count)
+}
+
+/// Try to index a single project directory, returning a ProjectRow if it contains project files.
+fn index_project_dir(
+    set_name: &str,
+    project_name: &str,
+    project_dir: &std::path::Path,
+) -> Option<db::projects::ProjectRow> {
+    let work_file = project_dir.join("project.work");
+    let strd_file = project_dir.join("project.strd");
+
+    if work_file.exists() {
+        info!("index_ot_projects: using project.work for {}/{}", set_name, project_name);
+    } else if strd_file.exists() {
+        info!("index_ot_projects: using project.strd for {}/{}", set_name, project_name);
+    } else {
+        return None;
+    }
+
+    let last_modified = project_dir
+        .metadata()
+        .ok()
+        .and_then(|m| m.modified().ok())
+        .map(|t| {
+            let secs = t
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            format_unix_timestamp(secs)
+        });
+
+    Some(db::projects::ProjectRow {
+        id: generate_project_id(project_dir),
+        set_name: set_name.to_string(),
+        project_name: project_name.to_string(),
+        card_path: project_dir.to_string_lossy().into_owned(),
+        tempo_bpm: None,
+        bank_count: None,
+        last_modified,
+    })
 }
 
 /// Generate a deterministic project ID from its card path using SHA-256 (first 16 bytes as hex).

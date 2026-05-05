@@ -624,55 +624,116 @@ pub async fn assign_sample(
 // Phase Quick: Audio preview command
 // ---------------------------------------------------------------------------
 
-/// Return the raw bytes of an audio file (WAV/AIFF) from the mounted OT volume.
+/// Resolve an OT sample path to a canonical filesystem path.
 ///
-/// `sample_path` is the normalized OT path from `SampleSlot.full_path`
-/// (e.g., "AUDIO/Alb/Field/sample.WAV"). It is resolved relative to the
-/// OT volume root (card_path's grandparent) using `resolve_ot_path` for
-/// path traversal prevention.
+/// OT paths come in several forms depending on firmware version and how the
+/// path was written:
+///   - `\AUDIO\kick.wav`      (backslash, absolute from card root)
+///   - `../AUDIO/kick.wav`    (relative from project dir — one or more `../`)
+///   - `AUDIO/kick.wav`       (relative from card root, no prefix)
+///
+/// Strategy: normalize to forward slashes, strip any `../` and leading `/`
+/// to get a card-root-relative path, then try resolving from the volume root.
+/// Falls back to resolving as-is from the project directory.
+fn resolve_sample_path(
+    card_path: &str,
+    volume_root: &std::path::Path,
+    sample_path: &str,
+) -> Result<PathBuf, AppError> {
+    let normalized = sample_path.replace('\\', "/");
+
+    // Strip "../" prefixes and leading "/" to get a card-root-relative path
+    let card_relative = normalized
+        .trim_start_matches("../")
+        .trim_start_matches('/');
+
+    // Strategy 1: resolve from volume root (handles all OT path variants)
+    let from_volume = volume_root.join(card_relative);
+
+    // Strategy 2: resolve as-is from project directory (fallback)
+    let project_dir = PathBuf::from(card_path);
+    let from_project = project_dir.join(&normalized);
+
+    let canonical = from_volume
+        .canonicalize()
+        .or_else(|_| from_project.canonicalize())
+        .map_err(|e| {
+            AppError::Io(format!(
+                "Cannot resolve sample '{}' (tried '{}' and '{}'): {}",
+                sample_path,
+                from_volume.display(),
+                from_project.display(),
+                e
+            ))
+        })?;
+
+    let canonical_volume = volume_root.canonicalize().map_err(|e| {
+        AppError::Io(format!("Cannot canonicalize volume root: {}", e))
+    })?;
+    if !canonical.starts_with(&canonical_volume) {
+        return Err(AppError::Io(format!(
+            "Sample path escapes volume: {}",
+            canonical.display()
+        )));
+    }
+
+    Ok(canonical)
+}
+
+/// Play a sample audio file through the system audio output via rodio.
+///
+/// Resolves the OT sample path relative to the project directory, then
+/// sends it to the dedicated audio thread for native playback — bypasses
+/// WKWebView which doesn't route audio to system output on macOS.
 #[tauri::command]
 #[specta::specta]
-pub async fn get_sample_audio_bytes(
+pub async fn play_sample(
     state: tauri::State<'_, crate::AppState>,
     project_id: String,
     sample_path: String,
-) -> Result<Vec<u8>, AppError> {
-    // 1. Get card_path from DB (same pattern as get_project_samples)
+) -> Result<(), AppError> {
     let card_path = {
         let db = state.db.lock().map_err(|e| AppError::Lock(e.to_string()))?;
         db::projects::get_card_path(&db.conn, &project_id)
             .map_err(|e| AppError::Database(e.to_string()))?
     };
+    let volume_root = {
+        let device = state.device.lock().map_err(|e| AppError::Lock(e.to_string()))?;
+        device
+            .mount_point
+            .clone()
+            .ok_or_else(|| AppError::Device("No OT volume mounted".into()))?
+    };
 
-    // 2. Derive the volume root from card_path.
-    //    card_path is like "/Volumes/OCTATRACK/SET1/Project01"
-    //    Volume root = project_dir.parent() (SET) .parent() (volume root)
-    let project_dir = PathBuf::from(&card_path);
-    let volume_root = project_dir
-        .parent() // SET directory
-        .and_then(|p| p.parent()) // Volume root
-        .ok_or_else(|| AppError::Io("Cannot determine volume root from project path".into()))?;
+    let resolved = resolve_sample_path(&card_path, &volume_root, &sample_path)?;
+    info!("play_sample: {}", resolved.display());
 
-    // 3. Strip leading ../ segments from sample_path (OT stores relative paths like ../AUDIO/...)
-    let cleaned_path = sample_path
-        .trim_start_matches("../")
-        .trim_start_matches("..\\");
+    // Pre-flight: verify the file can be opened and decoded before sending
+    // to the audio thread, so errors are reported back to the frontend.
+    let file = std::fs::File::open(&resolved)
+        .map_err(|e| AppError::Io(format!("Cannot open audio file '{}': {}", resolved.display(), e)))?;
+    let _ = rodio::Decoder::new(std::io::BufReader::new(file))
+        .map_err(|e| AppError::Io(format!("Cannot decode audio file '{}': {}", resolved.display(), e)))?;
 
-    // 4. Resolve the sample path safely using resolve_ot_path (traversal prevention)
-    let resolved = health::resolve_ot_path(volume_root, cleaned_path)
-        .ok_or_else(|| AppError::Io(format!("Cannot resolve sample path: {}", sample_path)))?;
+    state
+        .audio_tx
+        .send(crate::AudioCommand::Play(resolved))
+        .map_err(|e| AppError::Io(format!("Audio thread unavailable: {}", e)))?;
 
-    // 5. Verify file exists
-    if !resolved.exists() {
-        return Err(AppError::Io(format!("Audio file not found: {}", resolved.display())));
-    }
+    Ok(())
+}
 
-    // 6. Read file bytes (WAV/AIFF files are typically < 50MB for OT)
-    let bytes = std::fs::read(&resolved)
-        .map_err(|e| AppError::Io(format!("Failed to read audio file: {}", e)))?;
-
-    info!("Serving {} bytes for sample: {}", bytes.len(), resolved.display());
-    Ok(bytes)
+/// Stop any currently playing sample preview.
+#[tauri::command]
+#[specta::specta]
+pub async fn stop_sample(
+    state: tauri::State<'_, crate::AppState>,
+) -> Result<(), AppError> {
+    state
+        .audio_tx
+        .send(crate::AudioCommand::Stop)
+        .map_err(|e| AppError::Io(format!("Audio thread unavailable: {}", e)))?;
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

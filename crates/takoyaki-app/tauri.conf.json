@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "identifier": "com.takoyaki.app",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "npm run dev -- --port 3001",
     "beforeBuildCommand": "npm run build",
-    "devUrl": "http://localhost:3000",
+    "devUrl": "http://localhost:3001",
     "frontendDist": "../../out"
   },
   "bundle": {

@@ -1,76 +1,62 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { getSampleAudioBytes } from "@/lib/tauri";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { playSample, stopSample } from "@/lib/tauri";
 
-export type PlaybackState = "idle" | "loading" | "playing";
+export type PlaybackState = "idle" | "loading" | "playing" | "error";
 
 export function useAudioPreview() {
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
   const [activeSlotKey, setActiveSlotKey] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const blobUrlRef = useRef<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const stop = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
+  const stop = useCallback(async () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-    if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current);
-      blobUrlRef.current = null;
+    try {
+      await stopSample();
+    } catch {
+      // best-effort
     }
     setPlaybackState("idle");
     setActiveSlotKey(null);
   }, []);
 
+  useEffect(() => {
+    return () => { stopSample().catch(() => {}); };
+  }, []);
+
   const play = useCallback(
     async (projectId: string, samplePath: string, slotKey: string) => {
-      // If same slot is playing, stop it (toggle behavior)
       if (activeSlotKey === slotKey && playbackState === "playing") {
-        stop();
+        await stop();
         return;
       }
 
-      // Stop any current playback first
-      stop();
+      await stop();
 
       setPlaybackState("loading");
       setActiveSlotKey(slotKey);
+      setLastError(null);
 
       try {
-        const bytes = await getSampleAudioBytes(projectId, samplePath);
-        const uint8 = new Uint8Array(bytes);
-
-        // Determine MIME type from file extension
-        const ext = samplePath.split(".").pop()?.toLowerCase();
-        const mime =
-          ext === "aif" || ext === "aiff" ? "audio/aiff" : "audio/wav";
-
-        const blob = new Blob([uint8], { type: mime });
-        const url = URL.createObjectURL(blob);
-        blobUrlRef.current = url;
-
-        const audio = new Audio(url);
-        audioRef.current = audio;
-
-        audio.onended = () => {
-          stop();
-        };
-
-        audio.onerror = () => {
-          stop();
-        };
-
-        await audio.play();
+        await playSample(projectId, samplePath);
         setPlaybackState("playing");
-      } catch {
-        stop();
+      } catch (err) {
+        const msg = typeof err === "object" && err !== null
+          ? (err as Record<string, unknown>).Io ?? (err as Record<string, unknown>).Device ?? String(err)
+          : String(err);
+        console.error("[audio-preview] Playback failed:", msg);
+        setLastError(String(msg));
+        setPlaybackState("error");
+        setActiveSlotKey(null);
       }
     },
     [activeSlotKey, playbackState, stop]
   );
 
-  return { play, stop, playbackState, activeSlotKey };
+  return { play, stop, playbackState, activeSlotKey, lastError };
 }

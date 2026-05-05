@@ -21,11 +21,18 @@ pub struct DeviceState {
     pub confirmed: bool,
 }
 
+/// Messages sent to the dedicated audio thread.
+pub enum AudioCommand {
+    Play(PathBuf),
+    Stop,
+}
+
 /// Application-wide state managed by Tauri.
 pub struct AppState {
     pub db: Mutex<db::Database>,
     pub device: Mutex<DeviceState>,
     pub cancel_backup: Arc<AtomicBool>,
+    pub audio_tx: std::sync::mpsc::Sender<AudioCommand>,
 }
 
 pub fn run() {
@@ -51,7 +58,8 @@ pub fn run() {
         commands::management::copy_bank,
         commands::samples::compute_sample_dry_run,
         commands::samples::assign_sample,
-        commands::samples::get_sample_audio_bytes,
+        commands::samples::play_sample,
+        commands::samples::stop_sample,
         commands::wallflower::get_wallflower_status,
         commands::wallflower::search_wallflower_samples,
         commands::wallflower::set_wallflower_db_path,
@@ -65,6 +73,62 @@ pub fn run() {
         )
         .expect("Failed to export TypeScript bindings");
 
+    let (audio_tx, audio_rx) = std::sync::mpsc::channel::<AudioCommand>();
+
+    // Dedicated audio thread — owns the OutputStream (which is !Send)
+    std::thread::spawn(move || {
+        let (_stream, stream_handle) = match rodio::OutputStream::try_default() {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!("Failed to open audio output: {}", e);
+                return;
+            }
+        };
+        let mut sink: Option<rodio::Sink> = None;
+
+        for cmd in audio_rx {
+            match cmd {
+                AudioCommand::Play(path) => {
+                    // Stop previous playback
+                    if let Some(ref s) = sink {
+                        s.stop();
+                    }
+
+                    let file = match std::fs::File::open(&path) {
+                        Ok(f) => f,
+                        Err(e) => {
+                            tracing::error!("Failed to open audio file: {}", e);
+                            continue;
+                        }
+                    };
+                    let source = match rodio::Decoder::new(std::io::BufReader::new(file)) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            tracing::error!("Failed to decode audio: {}", e);
+                            continue;
+                        }
+                    };
+                    let new_sink = match rodio::Sink::try_new(&stream_handle) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            tracing::error!("Failed to create audio sink: {}", e);
+                            continue;
+                        }
+                    };
+                    new_sink.append(source);
+                    new_sink.play();
+                    sink = Some(new_sink);
+                }
+                AudioCommand::Stop => {
+                    if let Some(ref s) = sink {
+                        s.stop();
+                    }
+                    sink = None;
+                }
+            }
+        }
+    });
+
     let app_state = AppState {
         db: Mutex::new(db::Database::open_in_memory().expect("Failed to open database")),
         device: Mutex::new(DeviceState {
@@ -72,6 +136,7 @@ pub fn run() {
             confirmed: false,
         }),
         cancel_backup: Arc::new(AtomicBool::new(false)),
+        audio_tx,
     };
 
     tauri::Builder::default()

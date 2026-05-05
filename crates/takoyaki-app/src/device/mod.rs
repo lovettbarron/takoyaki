@@ -1,16 +1,61 @@
 use sysinfo::Disks;
 use std::path::PathBuf;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tracing::info;
 
-const OT_SIGNATURE_DIRS: &[&str] = &["AUDIO", "SETS"];
 const POLL_INTERVAL_SECS: u64 = 2;
 
 /// Check if a given path has the OT directory signature.
-/// An OT volume has both /AUDIO and /SETS directories at its root.
+/// Real OT CF cards have varied layouts depending on firmware version and user config.
+/// We detect by looking for known OT structural markers:
+/// - A root-level Set folder containing project files (bank*.strd, project.strd)
+/// - Or the PRESETS directory containing named Sets
+/// - Or the classic AUDIO + SETS top-level layout
 pub fn is_ot_volume(mount_point: &std::path::Path) -> bool {
-    OT_SIGNATURE_DIRS.iter().all(|d| mount_point.join(d).is_dir())
+    // Classic layout: top-level AUDIO + SETS
+    if mount_point.join("AUDIO").is_dir() && mount_point.join("SETS").is_dir() {
+        return true;
+    }
+
+    // Common layout: PRESETS directory at root containing Sets
+    if mount_point.join("PRESETS").is_dir() {
+        if has_ot_project_files(&mount_point.join("PRESETS")) {
+            return true;
+        }
+    }
+
+    // Any root-level directory containing OT project files (e.g. a Set folder)
+    if let Ok(entries) = std::fs::read_dir(mount_point) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() && has_ot_project_files(&path) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Check if a directory (or its immediate children) contains OT project files.
+fn has_ot_project_files(dir: &std::path::Path) -> bool {
+    // Direct project files in this dir
+    if dir.join("project.strd").is_file() || dir.join("bank01.strd").is_file() {
+        return true;
+    }
+    // One level deep (PRESETS/SetName/project.strd)
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.take(50).flatten() {
+            let path = entry.path();
+            if path.is_dir()
+                && (path.join("project.strd").is_file() || path.join("bank01.strd").is_file())
+            {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Scan all removable disks for an OT volume.
@@ -64,7 +109,7 @@ pub fn detect_ot_volume() -> Option<PathBuf> {
 }
 
 /// Background polling loop that checks for OT volume changes.
-/// Emits "ot-device-changed" event to frontend when state changes.
+/// Updates AppState.device and emits "ot-device-changed" event to frontend when state changes.
 /// Payload is Option<String> — Some(mount_path) when connected, None when disconnected.
 pub async fn poll_loop(app: AppHandle) {
     info!(
@@ -72,6 +117,16 @@ pub async fn poll_loop(app: AppHandle) {
         POLL_INTERVAL_SECS
     );
     let mut last_state: Option<PathBuf> = None;
+
+    // Check immediately on startup (no initial delay)
+    let initial = detect_ot_volume();
+    if initial.is_some() {
+        update_device_state(&app, &initial);
+        let payload = initial.as_ref().map(|p| p.to_string_lossy().to_string());
+        let _ = app.emit("ot-device-changed", &payload);
+        last_state = initial;
+    }
+
     loop {
         tokio::time::sleep(Duration::from_secs(POLL_INTERVAL_SECS)).await;
 
@@ -83,11 +138,22 @@ pub async fn poll_loop(app: AppHandle) {
                 Some(path) => info!("OT volume detected: {}", path.display()),
                 None => info!("OT volume disconnected"),
             }
+            update_device_state(&app, &current);
             let payload = current.as_ref().map(|p| p.to_string_lossy().to_string());
             let _ = app.emit("ot-device-changed", &payload);
             last_state = current;
         }
     }
+}
+
+fn update_device_state(app: &AppHandle, volume: &Option<PathBuf>) {
+    let state = app.state::<crate::AppState>();
+    if let Ok(mut device) = state.device.lock() {
+        device.mount_point = volume.clone();
+        if volume.is_none() {
+            device.confirmed = false;
+        }
+    };
 }
 
 /// Start the volume detection polling task.
@@ -104,7 +170,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn test_is_ot_volume_positive() {
+    fn test_is_ot_volume_classic_layout() {
         let tmp = TempDir::new().unwrap();
         std::fs::create_dir_all(tmp.path().join("AUDIO")).unwrap();
         std::fs::create_dir_all(tmp.path().join("SETS")).unwrap();
@@ -112,17 +178,21 @@ mod tests {
     }
 
     #[test]
-    fn test_is_ot_volume_negative_missing_audio() {
+    fn test_is_ot_volume_presets_layout() {
         let tmp = TempDir::new().unwrap();
-        std::fs::create_dir_all(tmp.path().join("SETS")).unwrap();
-        assert!(!is_ot_volume(tmp.path()));
+        let set_dir = tmp.path().join("PRESETS").join("MySet");
+        std::fs::create_dir_all(&set_dir).unwrap();
+        std::fs::write(set_dir.join("project.strd"), b"fake").unwrap();
+        assert!(is_ot_volume(tmp.path()));
     }
 
     #[test]
-    fn test_is_ot_volume_negative_missing_sets() {
+    fn test_is_ot_volume_root_set_folder() {
         let tmp = TempDir::new().unwrap();
-        std::fs::create_dir_all(tmp.path().join("AUDIO")).unwrap();
-        assert!(!is_ot_volume(tmp.path()));
+        let set_dir = tmp.path().join("Sett");
+        std::fs::create_dir_all(&set_dir).unwrap();
+        std::fs::write(set_dir.join("bank01.strd"), b"fake").unwrap();
+        assert!(is_ot_volume(tmp.path()));
     }
 
     #[test]
@@ -132,8 +202,15 @@ mod tests {
     }
 
     #[test]
+    fn test_is_ot_volume_negative_random_dirs() {
+        let tmp = TempDir::new().unwrap();
+        std::fs::create_dir_all(tmp.path().join("Documents")).unwrap();
+        std::fs::create_dir_all(tmp.path().join("Music")).unwrap();
+        assert!(!is_ot_volume(tmp.path()));
+    }
+
+    #[test]
     fn test_detect_does_not_panic() {
-        // detect_ot_volume should never panic regardless of system state
         let _ = detect_ot_volume();
     }
 }

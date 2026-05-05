@@ -60,6 +60,7 @@ pub enum ChangeType {
 
 /// A single file entry in a dry-run manifest.
 #[derive(Debug, Serialize, Type, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct FileChangeEntry {
     /// Relative path from project root.
     pub path: String,
@@ -69,6 +70,7 @@ pub struct FileChangeEntry {
 
 /// Conflict detail for bank copy operations (D-08 resolution UI, Plan 04-07).
 #[derive(Debug, Serialize, Type, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ConflictDetail {
     pub filename: String,
     pub source_hash: String,
@@ -77,6 +79,7 @@ pub struct ConflictDetail {
 
 /// Full dry-run manifest returned by compute_dry_run (SAFE-07).
 #[derive(Debug, Serialize, Type, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct FileChangeManifest {
     pub entries: Vec<FileChangeEntry>,
     pub total_added: usize,

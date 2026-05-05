@@ -48,10 +48,7 @@ export const commands = {
 	/**
 	 *  Return all 128 Flex and 128 Static sample slots for a project (BROW-04).
 	 * 
-	 *  Reads project.work via ot-parser. Until the Phase 1 parser for project.work
-	 *  is implemented, returns stub empty slot arrays.
-	 * 
-	 *  Assumption guard A3: All path normalization goes through `normalize_ot_path()`.
+	 *  Parses [SAMPLE]...[/SAMPLE] sections from project.work (text INI format).
 	 */
 	getProjectSamples: (projectId: string) => typedError<SampleSlotResponse, AppError>(__TAURI_INVOKE("get_project_samples", { projectId })),
 	// Get the current device connection status.
@@ -156,10 +153,79 @@ export const commands = {
 	 *  T-03-04: DB lock released before file I/O.
 	 */
 	copyBank: (sourceProjectId: string, sourceBankIndex: number, targetProjectId: string, targetBankIndex: number, conflictResolutions: { [key in string]: string }, onEvent: Channel<ManagementEvent>) => typedError<null, AppError>(__TAURI_INVOKE("copy_bank", { sourceProjectId, sourceBankIndex, targetProjectId, targetBankIndex, conflictResolutions, onEvent })),
+	/**
+	 *  Validate and preview a sample slot assignment without modifying any files (Phase 5, SMPL-01).
+	 * 
+	 *  Returns a FileChangeManifest showing which files would be modified, plus:
+	 *  - `hard_block`: set if the assignment is not allowed (wrong format, Flex size limit)
+	 *  - `soft_warnings`: non-blocking advisories (e.g., non-44.1kHz sample rate)
+	 * 
+	 *  Threat model:
+	 *  - T-05-01: canonicalize() + is_file() on file_path from native file picker
+	 *  - T-05-02: slot_type validated to "flex" | "static" only
+	 *  - T-05-03: slot_index bounds checked 0..=127
+	 */
+	computeSampleDryRun: (projectId: string, slotType: string, slotIndex: number, filePath: string) => typedError<SampleDryRunResult, AppError>(__TAURI_INVOKE("compute_sample_dry_run", { projectId, slotType, slotIndex, filePath })),
+	/**
+	 *  Assign a sample file to an OT project slot with snapshot + atomic write (Phase 5, SMPL-03).
+	 * 
+	 *  Safety guarantees:
+	 *  - SAFE-03: Snapshot of project.work + project.strd created before any modification.
+	 *  - SAFE-04: atomic_write_batch writes both files in one all-or-nothing transaction.
+	 *  - Wallflower files are copied to OT /AUDIO/ before project.work modification (RESEARCH Pitfall 5).
+	 * 
+	 *  Threat model:
+	 *  - T-05-02: slot_type validated to "flex" | "static"
+	 *  - T-05-03: slot_index bounds checked
+	 *  - T-05-04: pre-write snapshot + atomic_write_batch
+	 *  - T-05-05: Wallflower copy destination hardcoded to card_root/AUDIO/
+	 */
+	assignSample: (projectId: string, slotType: string, slotIndex: number, filePath: string, fromWallflower: boolean) => typedError<AssignSampleResult, AppError>(__TAURI_INVOKE("assign_sample", { projectId, slotType, slotIndex, filePath, fromWallflower })),
+	/**
+	 *  Play a sample audio file through the system audio output via rodio.
+	 * 
+	 *  Resolves the OT sample path relative to the project directory, then
+	 *  sends it to the dedicated audio thread for native playback — bypasses
+	 *  WKWebView which doesn't route audio to system output on macOS.
+	 */
+	playSample: (projectId: string, samplePath: string) => typedError<null, AppError>(__TAURI_INVOKE("play_sample", { projectId, samplePath })),
+	// Stop any currently playing sample preview.
+	stopSample: () => typedError<null, AppError>(__TAURI_INVOKE("stop_sample")),
+	/**
+	 *  Return connection state for the Wallflower DB per D-07.
+	 * 
+	 *  Auto-discovers DB via priority order (user-configured → data_dir → home).
+	 *  If connected, returns the count of samples in the `jams` table.
+	 *  DB lock is released before any file I/O (T-03-04 pattern).
+	 */
+	getWallflowerStatus: () => typedError<WallflowerStatus, AppError>(__TAURI_INVOKE("get_wallflower_status")),
+	/**
+	 *  Search Wallflower samples by filename, key, BPM, or tag.
+	 * 
+	 *  Returns up to 200 results ordered by filename ascending.
+	 *  Returns Io error if no Wallflower DB is found.
+	 *  All query parameters use rusqlite::params![] (T-05-08).
+	 */
+	searchWallflowerSamples: (query: string) => typedError<WallflowerSample[], AppError>(__TAURI_INVOKE("search_wallflower_samples", { query })),
+	/**
+	 *  Save user-configured Wallflower DB path to settings per D-08.
+	 * 
+	 *  Validates path.exists() before saving (T-05-10).
+	 *  Returns updated WallflowerStatus reflecting the new connection state.
+	 */
+	setWallflowerDbPath: (path: string) => typedError<WallflowerStatus, AppError>(__TAURI_INVOKE("set_wallflower_db_path", { path })),
 };
 
 /* Types */
 export type AppError = ({ Io: string }) & { Cancelled?: never; Database?: never; Device?: never; Lock?: never; Parse?: never } | ({ Parse: string }) & { Cancelled?: never; Database?: never; Device?: never; Io?: never; Lock?: never } | ({ Database: string }) & { Cancelled?: never; Device?: never; Io?: never; Lock?: never; Parse?: never } | ({ Lock: string }) & { Cancelled?: never; Database?: never; Device?: never; Io?: never; Parse?: never } | ({ Device: string }) & { Cancelled?: never; Database?: never; Io?: never; Lock?: never; Parse?: never } | "InvalidPath" | ({ Cancelled: string }) & { Database?: never; Device?: never; Io?: never; Lock?: never; Parse?: never };
+
+// Result returned after a successful sample assignment.
+export type AssignSampleResult = {
+	files_written: number,
+	slot_type: string,
+	slot_index: number,
+	filename: string,
+};
 
 // Events emitted to the frontend during backup and restore operations.
 export type BackupEvent = { event: "started"; data: {
@@ -215,8 +281,8 @@ export type ChangeType = "Added" | "Modified" | "Removed" | "Unchanged" |
 // Conflict detail for bank copy operations (D-08 resolution UI, Plan 04-07).
 export type ConflictDetail = {
 	filename: string,
-	source_hash: string,
-	target_hash: string,
+	sourceHash: string,
+	targetHash: string,
 };
 
 export type DeviceStatus = {
@@ -229,23 +295,23 @@ export type DeviceStatus = {
 export type FileChangeEntry = {
 	// Relative path from project root.
 	path: string,
-	change_type: ChangeType,
-	size_bytes: number,
+	changeType: ChangeType,
+	sizeBytes: number,
 };
 
 // Full dry-run manifest returned by compute_dry_run (SAFE-07).
 export type FileChangeManifest = {
 	entries: FileChangeEntry[],
-	total_added: number,
-	total_modified: number,
-	total_removed: number,
-	total_unchanged: number,
-	total_bytes: number,
-	destination_path: string,
-	operation_label: string,
-	project_name: string,
+	totalAdded: number,
+	totalModified: number,
+	totalRemoved: number,
+	totalUnchanged: number,
+	totalBytes: number,
+	destinationPath: string,
+	operationLabel: string,
+	projectName: string,
 	// Populated for bank-copy operations only — empty for backup/restore/duplicate/rename/export.
-	conflict_details: ConflictDetail[],
+	conflictDetails: ConflictDetail[],
 };
 
 /**
@@ -312,6 +378,15 @@ export type ProjectSummary = {
 	last_modified: string | null,
 };
 
+// Result of a dry-run computation for a sample assignment.
+export type SampleDryRunResult = {
+	manifest: FileChangeManifest,
+	// If set, the assignment is blocked (incompatible format or slot type mismatch).
+	hard_block: string | null,
+	// Non-blocking warnings (e.g., non-44.1kHz sample rate).
+	soft_warnings: string[],
+};
+
 // One sample slot (0-indexed, 0..=127 for Flex and Static each).
 export type SampleSlot = {
 	slot_index: number,
@@ -338,6 +413,26 @@ export type TrackDetail = {
 	machine_type: string,
 	sample_slot_index: number | null,
 	sample_filename: string | null,
+};
+
+// A single Wallflower sample (from the `jams` table with metadata joins).
+export type WallflowerSample = {
+	id: number,
+	filename: string,
+	file_path: string,
+	sample_rate: number | null,
+	bit_depth: number | null,
+	bpm: number | null,
+	key_name: string | null,
+	scale: string | null,
+	tags: string[],
+};
+
+// Connection state for the Wallflower DB (returned by `get_wallflower_status`).
+export type WallflowerStatus = {
+	connected: boolean,
+	db_path: string | null,
+	sample_count: number | null,
 };
 
 /* Tauri Specta runtime */

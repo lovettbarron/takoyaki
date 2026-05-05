@@ -21,7 +21,7 @@ interface SlotRowProps {
   /** Called when the play button is clicked — triggers audio preview */
   onPlay?: (slotIndex: number, slotType: "flex" | "static") => void;
   /** Current playback state from useAudioPreview */
-  playbackState?: "idle" | "loading" | "playing";
+  playbackState?: "idle" | "loading" | "playing" | "error";
   /** Whether THIS specific slot is the currently active/playing one */
   isPlaying?: boolean;
   /** Inline error message for this slot (hard block or assignment failure) */
@@ -159,13 +159,22 @@ export function SlotRow({ slot, slotType, crossRefs, healthIssues, onAssign, onP
         {/* Play button — w-8 */}
         <span className="w-8 shrink-0 flex items-center justify-center">
           {slot.occupied && slot.full_path && (
-            <button
-              type="button"
+            <span
+              role="button"
+              tabIndex={-1}
               onClick={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 onPlay?.(slot.slot_index, slotType);
               }}
-              className="h-8 w-8 flex items-center justify-center rounded hover:bg-[hsl(30,8%,20%)] text-muted-foreground hover:text-foreground"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onPlay?.(slot.slot_index, slotType);
+                }
+              }}
+              className="h-8 w-8 flex items-center justify-center rounded hover:bg-[hsl(30,8%,20%)] text-muted-foreground hover:text-foreground cursor-pointer"
               aria-label={
                 isPlaying
                   ? `Stop preview of ${slotType} slot ${slot.slot_index + 1}`
@@ -176,29 +185,33 @@ export function SlotRow({ slot, slotType, crossRefs, healthIssues, onAssign, onP
                 <Loader2 size={14} className="animate-spin" />
               ) : isPlaying && playbackState === "playing" ? (
                 <Square size={12} className="fill-current" />
+              ) : playbackState === "error" && isPlaying ? (
+                <Play size={14} className="fill-current text-destructive" />
               ) : (
                 <Play size={14} className="fill-current" />
               )}
-            </button>
+            </span>
           )}
         </span>
 
         {/* Assign button — w-8 trailing column */}
         <span className="w-8 shrink-0 flex items-center justify-center">
-          <button
-            type="button"
+          <span
+            role="button"
+            tabIndex={-1}
             onClick={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               onAssign?.(slot.slot_index, slotType);
             }}
             className={[
-              "h-8 w-8 flex items-center justify-center rounded hover:bg-[hsl(30,8%,20%)] text-muted-foreground hover:text-foreground",
+              "h-8 w-8 flex items-center justify-center rounded hover:bg-[hsl(30,8%,20%)] text-muted-foreground hover:text-foreground cursor-pointer",
               !onAssign ? "opacity-40 pointer-events-none" : "",
             ].join(" ")}
             aria-label={`Assign sample to ${slotType === "flex" ? "Flex" : "Static"} slot ${String(slot.slot_index + 1).padStart(3, "0")}`}
           >
             <Upload size={14} />
-          </button>
+          </span>
         </span>
       </CollapsibleTrigger>
 

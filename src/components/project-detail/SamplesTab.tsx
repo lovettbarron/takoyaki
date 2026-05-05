@@ -85,7 +85,7 @@ interface SlotSectionProps {
   onAssign?: (slotIndex: number, slotType: "flex" | "static") => void;
   onPlay?: (slotIndex: number, slotType: "flex" | "static") => void;
   activeSlotKey?: string | null;
-  playbackState?: "idle" | "loading" | "playing";
+  playbackState?: "idle" | "loading" | "playing" | "error";
   slotError: { slotIndex: number; slotType: "flex" | "static"; message: string } | null;
   slotErrorRedirect: { label: string; targetSlotType: "flex" | "static"; targetSlotIndex: number } | null;
   onSlotRedirect: () => void;
