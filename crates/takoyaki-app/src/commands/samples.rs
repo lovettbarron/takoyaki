@@ -764,13 +764,49 @@ pub(crate) struct ParsedProjectWork {
 ///
 /// Infallible: returns defaults on any parse error, never panics.
 /// Bounds-checked: slot indices >= 128 are silently ignored (security).
-pub(crate) fn parse_project_work(_raw: &[u8]) -> ParsedProjectWork {
-    // Stub -- tests will fail (RED phase)
-    ParsedProjectWork {
-        tempo_raw: None,
-        flex_slots: vec![None; 128],
-        static_slots: vec![None; 128],
+pub(crate) fn parse_project_work(raw: &[u8]) -> ParsedProjectWork {
+    let text = String::from_utf8_lossy(raw);
+    let mut tempo_raw: Option<u32> = None;
+    let mut flex_slots: Vec<Option<String>> = vec![None; 128];
+    let mut static_slots: Vec<Option<String>> = vec![None; 128];
+    let mut in_settings = false;
+    let mut in_slots = false;
+
+    for line in text.lines() {
+        let trimmed = line.trim();
+        match trimmed {
+            "[SETTINGS]" => { in_settings = true; in_slots = false; }
+            "[SLOTS]" => { in_slots = true; in_settings = false; }
+            s if s.starts_with('[') => { in_settings = false; in_slots = false; }
+            s if in_settings => {
+                if let Some(rest) = s.strip_prefix("TEMPO:") {
+                    tempo_raw = rest.trim().parse().ok();
+                }
+            }
+            s if in_slots => {
+                if let Some(rest) = s.strip_prefix("FLEX") {
+                    if let Some(colon) = rest.find(':') {
+                        let idx: usize = rest[..colon].parse().unwrap_or(999);
+                        if idx < 128 {
+                            let path = rest[colon + 1..].trim();
+                            flex_slots[idx] = if path.is_empty() { None } else { Some(path.to_string()) };
+                        }
+                    }
+                } else if let Some(rest) = s.strip_prefix("STAT") {
+                    if let Some(colon) = rest.find(':') {
+                        let idx: usize = rest[..colon].parse().unwrap_or(999);
+                        if idx < 128 {
+                            let path = rest[colon + 1..].trim();
+                            static_slots[idx] = if path.is_empty() { None } else { Some(path.to_string()) };
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
     }
+
+    ParsedProjectWork { tempo_raw, flex_slots, static_slots }
 }
 
 // ---------------------------------------------------------------------------
