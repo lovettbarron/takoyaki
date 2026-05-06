@@ -119,7 +119,7 @@ fn filename_from_path(path: &str) -> String {
 
 /// Return all 128 Flex and 128 Static sample slots for a project (BROW-04).
 ///
-/// Parses [SAMPLE]...[/SAMPLE] sections from project.work (text INI format).
+/// Parses [SLOTS] section from project.work (FLEX0:path / STAT0:path format).
 #[tauri::command]
 #[specta::specta]
 pub async fn get_project_samples(
@@ -147,56 +147,30 @@ pub async fn get_project_samples(
         });
     };
 
-    let content = std::fs::read_to_string(&file_to_read).map_err(AppError::from)?;
-    let parsed = parse_sample_slots(&content);
+    let raw = std::fs::read(&file_to_read).map_err(AppError::from)?;
+    let parsed = parse_project_work(&raw);
 
-    let mut flex: Vec<SampleSlot> = (0..128u8)
-        .map(|i| SampleSlot {
-            slot_index: i,
-            occupied: false,
-            filename: None,
-            full_path: None,
+    let flex: Vec<SampleSlot> = parsed.flex_slots.iter().enumerate().map(|(i, path_opt)| {
+        SampleSlot {
+            slot_index: i as u8,
+            occupied: path_opt.is_some(),
+            filename: path_opt.as_deref().map(filename_from_path),
+            full_path: path_opt.clone(),
             sample_rate: None,
-            status: "unknown".to_string(),
-        })
-        .collect();
-
-    let mut static_slots: Vec<SampleSlot> = (0..128u8)
-        .map(|i| SampleSlot {
-            slot_index: i,
-            occupied: false,
-            filename: None,
-            full_path: None,
-            sample_rate: None,
-            status: "unknown".to_string(),
-        })
-        .collect();
-
-    for entry in &parsed {
-        let slot_idx = entry.slot.saturating_sub(1); // OT slots are 1-based
-        if slot_idx >= 128 {
-            continue;
+            status: if path_opt.is_some() { "ok" } else { "unknown" }.to_string(),
         }
-        let path = entry.path.as_deref().filter(|p| !p.is_empty());
-        let occupied = path.is_some();
-        let full_path = path.map(|p| p.to_string());
-        let filename = full_path.as_deref().map(filename_from_path);
+    }).collect();
 
-        let slot = SampleSlot {
-            slot_index: slot_idx as u8,
-            occupied,
-            filename,
-            full_path,
+    let static_slots: Vec<SampleSlot> = parsed.static_slots.iter().enumerate().map(|(i, path_opt)| {
+        SampleSlot {
+            slot_index: i as u8,
+            occupied: path_opt.is_some(),
+            filename: path_opt.as_deref().map(filename_from_path),
+            full_path: path_opt.clone(),
             sample_rate: None,
-            status: if occupied { "ok" } else { "unknown" }.to_string(),
-        };
-
-        match entry.slot_type.as_str() {
-            "FLEX" => flex[slot_idx as usize] = slot,
-            "STATIC" => static_slots[slot_idx as usize] = slot,
-            _ => {}
+            status: if path_opt.is_some() { "ok" } else { "unknown" }.to_string(),
         }
-    }
+    }).collect();
 
     info!(
         "get_project_samples: found {} flex, {} static occupied slots",
@@ -220,51 +194,6 @@ fn make_empty_slots(count: u8) -> Vec<SampleSlot> {
         .collect()
 }
 
-struct ParsedSampleEntry {
-    slot_type: String,
-    slot: u16,
-    path: Option<String>,
-}
-
-/// Parse [SAMPLE]...[/SAMPLE] blocks from OT project.work text content.
-fn parse_sample_slots(content: &str) -> Vec<ParsedSampleEntry> {
-    let mut results = Vec::new();
-    let mut in_sample_block = false;
-    let mut current_type = String::new();
-    let mut current_slot: u16 = 0;
-    let mut current_path: Option<String> = None;
-
-    for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed == "[SAMPLE]" {
-            in_sample_block = true;
-            current_type.clear();
-            current_slot = 0;
-            current_path = None;
-        } else if trimmed == "[/SAMPLE]" {
-            if in_sample_block && current_slot > 0 && !current_type.is_empty() {
-                results.push(ParsedSampleEntry {
-                    slot_type: current_type.clone(),
-                    slot: current_slot,
-                    path: current_path.take(),
-                });
-            }
-            in_sample_block = false;
-        } else if in_sample_block {
-            if let Some(val) = trimmed.strip_prefix("TYPE=") {
-                current_type = val.to_string();
-            } else if let Some(val) = trimmed.strip_prefix("SLOT=") {
-                current_slot = val.parse().unwrap_or(0);
-            } else if let Some(val) = trimmed.strip_prefix("PATH=") {
-                if !val.is_empty() {
-                    current_path = Some(val.to_string());
-                }
-            }
-        }
-    }
-
-    results
-}
 
 /// Build a `SampleSlot` from raw binary slot data.
 ///
@@ -746,7 +675,7 @@ pub async fn stop_sample(
 /// Bank names, part names, and machine types are NOT in project.work
 /// (they are in the bank file opaque body -- out of scope for Phase 7).
 #[derive(Debug, Clone)]
-pub(crate) struct ParsedProjectWork {
+pub struct ParsedProjectWork {
     /// Raw tempo integer from TEMPO: key (divide by TEMPO_SCALE_FACTOR for BPM)
     pub tempo_raw: Option<u32>,
     /// 128 Flex slot paths (0-indexed). None = empty/unoccupied.
@@ -764,7 +693,7 @@ pub(crate) struct ParsedProjectWork {
 ///
 /// Infallible: returns defaults on any parse error, never panics.
 /// Bounds-checked: slot indices >= 128 are silently ignored (security).
-pub(crate) fn parse_project_work(raw: &[u8]) -> ParsedProjectWork {
+pub fn parse_project_work(raw: &[u8]) -> ParsedProjectWork {
     let text = String::from_utf8_lossy(raw);
     let mut tempo_raw: Option<u32> = None;
     let mut flex_slots: Vec<Option<String>> = vec![None; 128];

@@ -118,34 +118,39 @@ pub async fn get_project_detail(
         (path, name, bpm, banks, modified)
     };
 
-    // Assumption guard A2: log conversion so scale factor is visible in debug output.
-    // When Phase 1 fixtures are available this lets us verify raw_tempo / TEMPO_SCALE_FACTOR.
-    let display_tempo = tempo_bpm.unwrap_or(0.0);
+    // Read real tempo from project.work (Phase 7: replaces SQLite-only stub)
+    let project_path = std::path::PathBuf::from(&card_path);
+    let raw = std::fs::read(project_path.join("project.work"))
+        .or_else(|_| std::fs::read(project_path.join("project.strd")))
+        .unwrap_or_default();
+    let parsed_work = crate::commands::samples::parse_project_work(&raw);
+    let display_tempo = parsed_work.tempo_raw
+        .map(|r| r as f32 / TEMPO_SCALE_FACTOR)
+        .unwrap_or_else(|| tempo_bpm.unwrap_or(0.0));
     tracing::debug!(
-        "get_project_detail: card_path={} display_tempo={}bpm (TEMPO_SCALE_FACTOR={})",
+        "get_project_detail: card_path={} raw_tempo={:?} display_tempo={}bpm (TEMPO_SCALE_FACTOR={})",
         card_path,
+        parsed_work.tempo_raw,
         display_tempo,
         TEMPO_SCALE_FACTOR
     );
 
-    // FIXME: Phase 1 OT parser (project.work / bank.work) not yet implemented.
-    // Until then, return stub bank entries derived from bank_count.
-    // Each bank is marked populated=false and contains 4 empty parts × 8 empty tracks.
-    let n_banks = bank_count.unwrap_or(0) as usize;
+    // Phase 7: real bank file checks replace stub bank entries.
+    // Bank names, part names, machine types remain None/"Thru" (bank body is opaque).
     let banks = (0u8..16).map(|bank_index| {
-        let populated = (bank_index as usize) < n_banks;
+        let populated = is_bank_populated(&project_path, bank_index);
         BankDetail {
             bank_index,
             populated,
-            bank_name: None,
+            bank_name: None, // Bank body is opaque -- cannot extract names (Phase 7 limitation)
             parts: (0u8..4)
                 .map(|part_index| PartDetail {
                     part_index,
-                    part_name: None,
+                    part_name: None, // Bank body opaque
                     tracks: (0u8..8)
                         .map(|track_index| TrackDetail {
                             track_index,
-                            machine_type: "Thru".to_string(),
+                            machine_type: "Thru".to_string(), // Bank body opaque
                             sample_slot_index: None,
                             sample_filename: None,
                         })
@@ -177,32 +182,19 @@ pub async fn get_project_banks(
     state: tauri::State<'_, AppState>,
     project_id: String,
 ) -> Result<Vec<BankSummary>, AppError> {
-    let bank_count = {
+    let card_path = {
         let db = state.db.lock().map_err(|e| AppError::Lock(e.to_string()))?;
-        let _card_path = db::projects::get_card_path(&db.conn, &project_id)
-            .map_err(|e| AppError::Database(e.to_string()))?;
-        let filter = db::projects::ProjectFilter {
-            name: None,
-            bpm_min: None,
-            bpm_max: None,
-            modified_since: None,
-        };
-        let projects = db::projects::list_projects(&db.conn, &filter)
-            .map_err(|e| AppError::Database(e.to_string()))?;
-        projects
-            .into_iter()
-            .find(|p| p.id == project_id)
-            .and_then(|p| p.bank_count)
-            .unwrap_or(0)
+        db::projects::get_card_path(&db.conn, &project_id)
+            .map_err(|e| AppError::Database(e.to_string()))?
     };
+    // DB lock dropped -- file I/O follows
 
-    // FIXME: Phase 1 OT bank file parser not yet implemented.
-    // Stub: mark first `bank_count` banks as populated.
+    let project_path = std::path::PathBuf::from(&card_path);
     let summaries = (0u8..16)
         .map(|bank_index| {
-            let populated = is_bank_populated_stub(bank_index, bank_count);
+            let populated = is_bank_populated(&project_path, bank_index);
             tracing::debug!(
-                "get_project_banks: bank_index={} populated={} (stub)",
+                "get_project_banks: bank_index={} populated={}",
                 bank_index,
                 populated
             );
@@ -217,16 +209,22 @@ pub async fn get_project_banks(
     Ok(summaries)
 }
 
-/// Determine whether a bank is populated.
+/// Determine whether a bank is populated by checking if the bank file
+/// exists on disk and parses as a valid OT bank file.
 ///
-/// Assumption guard (Open Question 4): This function is isolated so that once
-/// Phase 1 binary parser fixtures are available, the real logic (e.g., checking
-/// an explicit populated flag or non-zero pattern content in the bank file) can
-/// replace the stub without touching the command handler.
-fn is_bank_populated_stub(bank_index: u8, bank_count: u8) -> bool {
-    // Stub: treat the first `bank_count` banks (0-indexed) as populated.
-    // Replace with: parse the bank file and check for non-empty patterns.
-    bank_index < bank_count
+/// Bank files are 1-indexed on disk: bank01.work through bank16.work.
+/// A bank is considered populated if its file exists AND passes
+/// BankFile::from_bytes() magic validation (FORM header check).
+///
+/// Note: An unpopulated bank with a valid header may still parse as Ok --
+/// this is a known limitation (RESEARCH.md Assumption A3).
+fn is_bank_populated(project_dir: &std::path::Path, bank_index: u8) -> bool {
+    let filename = format!("bank{:02}.work", bank_index + 1);
+    let bank_path = project_dir.join(&filename);
+    match std::fs::read(&bank_path) {
+        Ok(data) => ot_parser::BankFile::from_bytes(&data).is_ok(),
+        Err(_) => false,
+    }
 }
 
 /// Walk the SETS directory on the mounted OT volume, parse each project.work file,

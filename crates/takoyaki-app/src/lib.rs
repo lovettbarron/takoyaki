@@ -1,5 +1,5 @@
 pub mod atomic;
-mod commands;
+pub mod commands;
 pub mod db;
 pub mod device;
 mod error;
