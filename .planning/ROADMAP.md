@@ -140,9 +140,10 @@ Plans:
   3. Health check scans actual slot inputs and detects real missing/incompatible samples
   4. `is_bank_populated` derives from actual bank file parsing, not a stub integer
   5. SlotPickerDialog shows real occupied/empty slot state
-**Plans:** 1 plan
+**Plans:** 2 plans
 Plans:
-- [ ] 06-01-PLAN.md — Persistent DB initialization and mark_backup_complete row-count guard (TDD)
+- [ ] 07-01-PLAN.md — TDD: parse_project_work() real format parser with unit tests and fixture updates
+- [ ] 07-02-PLAN.md — Wire parser into Tauri commands, suppress DETC-03 flood, un-ignore integration tests
 **UI hint**: no
 
 ### Phase 8: Phase 5 Quality & Safety Fixes
@@ -155,9 +156,9 @@ Plans:
   2. `assign_sample` independently validates audio format before writing (WAV/AIFF, 44.1kHz, correct bit depth)
   3. Wallflower file copy uses atomic write (stage + rename), not `std::fs::copy`
   4. When Wallflower destination file already exists, the user sees a conflict prompt instead of a silent skip
-**Plans:** 1 plan
+**Plans:** 0 plans
 Plans:
-- [ ] 06-01-PLAN.md — Persistent DB initialization and mark_backup_complete row-count guard (TDD)
+- (not yet planned)
 **UI hint**: no
 
 ## Progress
@@ -171,7 +172,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 2. Read-Only Browser | 5/5 | Complete | - |
 | 3. Write Path and Backup | 4/4 | Complete | - |
 | 4. Advanced Management | 7/7 | Complete | - |
-| 5. Sample Assignment and Wallflower | 0/4 | Planning complete | - |
-| 6. Database Persistence & Safety Fix | 0/1 | Planning complete | - |
-| 7. Parser Integration — Replace Stub Data | 0/0 | Not started | - |
+| 5. Sample Assignment and Wallflower | 4/4 | Complete | - |
+| 6. Database Persistence & Safety Fix | 1/1 | Complete | - |
+| 7. Parser Integration — Replace Stub Data | 0/2 | Planning complete | - |
 | 8. Phase 5 Quality & Safety Fixes | 0/0 | Not started | - |
