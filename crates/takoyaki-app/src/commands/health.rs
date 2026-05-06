@@ -53,14 +53,39 @@ pub async fn run_health_check(
     // 2. Spawn background task — return Ok(()) immediately so the UI is never blocked.
     //    The spawned task owns all data it needs (project_path, volume_path, project_id, app).
     tauri::async_runtime::spawn(async move {
-        // Build stub slot list from project_path.
-        // FIXME: Phase 1 OT project.work parser not yet implemented.
-        // When available, replace this stub with:
-        //   let data = std::fs::read(project_path.join("project.work"))?;
-        //   let project = ot_parser::ProjectFile::from_bytes(&data)?;
-        //   build real SlotCheckInput list from project.flex_sample_slots / static_sample_slots
-        //   and cross-reference track references from all 16 bank files.
-        let slot_inputs: Vec<crate::health::SlotCheckInput> = Vec::new();
+        // Read project.work to build real slot inputs (Phase 7: replaces empty stub)
+        let raw = std::fs::read(format!("{}/project.work", project_path))
+            .or_else(|_| std::fs::read(format!("{}/project.strd", project_path)))
+            .unwrap_or_default();
+
+        let parsed = crate::commands::samples::parse_project_work(&raw);
+
+        let mut slot_inputs: Vec<crate::health::SlotCheckInput> = Vec::new();
+
+        for (idx, path_opt) in parsed.flex_slots.iter().enumerate() {
+            slot_inputs.push(crate::health::SlotCheckInput {
+                slot_type: "flex".to_string(),
+                slot_index: idx as u8,
+                occupied: path_opt.is_some(),
+                raw_path: path_opt.clone(),
+                track_references: vec![], // Bank body opaque -- DETC-03 limitation
+            });
+        }
+        for (idx, path_opt) in parsed.static_slots.iter().enumerate() {
+            slot_inputs.push(crate::health::SlotCheckInput {
+                slot_type: "static".to_string(),
+                slot_index: idx as u8,
+                occupied: path_opt.is_some(),
+                raw_path: path_opt.clone(),
+                track_references: vec![], // Bank body opaque -- DETC-03 limitation
+            });
+        }
+
+        tracing::info!(
+            "run_health_check: built {} slot inputs ({} occupied)",
+            slot_inputs.len(),
+            slot_inputs.iter().filter(|s| s.occupied).count(),
+        );
 
         let issues = crate::health::perform_health_check(
             &project_path,

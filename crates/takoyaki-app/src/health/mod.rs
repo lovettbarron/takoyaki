@@ -375,7 +375,14 @@ pub async fn perform_health_check(
         }
 
         // DETC-03: Unused sample detection (slot assigned but not referenced by any track).
-        if slot.track_references.is_empty() {
+        // Phase 7 limitation: track_references is always empty because bank file body
+        // is opaque -- we cannot determine which tracks reference which slots.
+        // Skip DETC-03 check when track_references is empty to avoid a false-positive
+        // flood (every occupied slot would be flagged as "unused").
+        // TODO: Re-enable when bank body parser provides real track references.
+        if !slot.track_references.is_empty() {
+            // Check if the slot is truly unreferenced
+            // (This path is not reached in Phase 7 but is ready for future use)
             let filename = resolved_path
                 .file_name()
                 .map(|n| n.to_string_lossy().to_string())
