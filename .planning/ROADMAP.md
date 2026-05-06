@@ -156,9 +156,10 @@ Plans:
   2. `assign_sample` independently validates audio format before writing (WAV/AIFF, 44.1kHz, correct bit depth)
   3. Wallflower file copy uses atomic write (stage + rename), not `std::fs::copy`
   4. When Wallflower destination file already exists, the user sees a conflict prompt instead of a silent skip
-**Plans:** 0 plans
+**Plans:** 2 plans
 Plans:
-- (not yet planned)
+- [ ] 08-01-PLAN.md — Rust backend: format gate, atomic Wallflower copy, and overwrite/conflict param (TDD)
+- [ ] 08-02-PLAN.md — Frontend: Dismiss button wiring, assignSample overwrite param, and conflict prompt UI
 **UI hint**: no
 
 ## Progress
@@ -175,4 +176,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Sample Assignment and Wallflower | 4/4 | Complete | - |
 | 6. Database Persistence & Safety Fix | 1/1 | Complete | - |
 | 7. Parser Integration — Replace Stub Data | 2/2 | Complete | 2026-05-06 |
-| 8. Phase 5 Quality & Safety Fixes | 0/0 | Not started | - |
+| 8. Phase 5 Quality & Safety Fixes | 0/2 | In Progress | - |
