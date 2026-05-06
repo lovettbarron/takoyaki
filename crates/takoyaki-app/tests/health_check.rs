@@ -14,14 +14,34 @@ fn fixture_path(relative: &str) -> std::path::PathBuf {
         .join(relative)
 }
 
-#[test]
-#[ignore = "Requires Plan 02 production code: health::perform_health_check with SlotCheckInput"]
-fn test_health_missing_file() {
+#[tokio::test]
+async fn test_health_missing_file() {
     // DETC-01: missing sample file detected as Error severity
-    // Setup: construct a SlotCheckInput with a path that does not exist
-    // Act: run the health check logic on this slot
-    // Assert: result contains HealthIssue::Error with "File not found" in detail
-    todo!("Plan 02 creates health::perform_health_check — integration test needs async runtime")
+    let volume_path = fixture_path("");
+    let slot_inputs = vec![
+        takoyaki_app::health::SlotCheckInput {
+            slot_type: "flex".to_string(),
+            slot_index: 0,
+            occupied: true,
+            raw_path: Some("../AUDIO/nonexistent_file.wav".to_string()),
+            track_references: vec![],
+        },
+    ];
+
+    let project_path = fixture_path("SETS/LIVESET/PROJECT_01")
+        .to_string_lossy()
+        .to_string();
+    let issues = takoyaki_app::health::perform_health_check(
+        &project_path,
+        &volume_path,
+        &slot_inputs,
+    ).await;
+
+    assert!(!issues.is_empty(), "Should detect at least one issue for missing file");
+    let has_error = issues.iter().any(|issue| {
+        matches!(issue, takoyaki_app::health::HealthIssue::Error { .. })
+    });
+    assert!(has_error, "Missing file should produce Error severity, got: {:?}", issues);
 }
 
 #[test]
@@ -76,12 +96,38 @@ fn test_health_unsupported_format() {
     );
 }
 
-#[test]
-#[ignore = "Requires Plan 02 production code: health::perform_health_check with SlotCheckInput"]
-fn test_health_unused_sample() {
-    // DETC-03: slot with no track references detected as Info severity
-    // Setup: construct a SlotCheckInput with occupied=true, empty track_references
-    // Act: run the health check logic on this slot
-    // Assert: result contains HealthIssue::Info with "not referenced" in detail
-    todo!("Plan 02 creates health::perform_health_check — integration test needs async runtime")
+#[tokio::test]
+async fn test_health_unused_sample_suppressed_when_no_track_refs() {
+    // DETC-03: When track_references is empty (bank body opaque), the "unused sample"
+    // Info issue should NOT be emitted (Phase 7 suppression guard).
+    let volume_path = fixture_path("");
+    let slot_inputs = vec![
+        takoyaki_app::health::SlotCheckInput {
+            slot_type: "flex".to_string(),
+            slot_index: 0,
+            occupied: true,
+            raw_path: Some("AUDIO/kick_44100.wav".to_string()),
+            track_references: vec![], // Empty -- DETC-03 should be suppressed
+        },
+    ];
+
+    let project_path = fixture_path("SETS/LIVESET/PROJECT_01")
+        .to_string_lossy()
+        .to_string();
+    let issues = takoyaki_app::health::perform_health_check(
+        &project_path,
+        &volume_path,
+        &slot_inputs,
+    ).await;
+
+    // Should NOT have any Info issues about "not referenced by any track"
+    let has_unused_info = issues.iter().any(|issue| {
+        match issue {
+            takoyaki_app::health::HealthIssue::Info { detail, .. } => {
+                detail.contains("not referenced")
+            }
+            _ => false,
+        }
+    });
+    assert!(!has_unused_info, "DETC-03 should be suppressed when track_references is empty, got: {:?}", issues);
 }
