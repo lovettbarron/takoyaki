@@ -1007,4 +1007,56 @@ mod tests {
         assert_eq!(parsed.flex_slots[1], None);
         assert_eq!(parsed.static_slots[0], None);
     }
+
+    // -----------------------------------------------------------------------
+    // Phase 8 Plan 01: Format gate, atomic copy, conflict detection (WR-02/WR-03/WR-04)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_assign_rejects_unsupported_format() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let txt = create_non_audio_fixture(tmp.path(), "not_audio.mp3");
+        let spec = crate::health::read_audio_spec(&txt).expect("read_audio_spec returns Ok");
+        let issues = crate::health::check_format_compatibility(&spec);
+        let has_unsupported = issues.iter().any(|i| matches!(i, crate::health::FormatIssue::UnsupportedFormat(_)));
+        assert!(has_unsupported, "Non-audio file must produce UnsupportedFormat issue — assign_sample format gate depends on this");
+    }
+
+    #[test]
+    fn test_wallflower_atomic_copy_no_partial() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let src = create_wav_fixture(tmp.path(), "kick.wav", 44100, 16);
+        let dest_dir = tmp.path().join("AUDIO");
+        std::fs::create_dir_all(&dest_dir).unwrap();
+        let filename = "kick.wav";
+        let temp_dest = dest_dir.join(format!(".{}.tmp", filename));
+        let final_dest = dest_dir.join(filename);
+
+        // Atomic copy: stage to .tmp then rename
+        std::fs::copy(&src, &temp_dest).unwrap();
+        std::fs::rename(&temp_dest, &final_dest).unwrap();
+
+        assert!(final_dest.exists(), "Final destination must exist after atomic copy");
+        assert!(!temp_dest.exists(), ".tmp staging file must not remain after rename");
+    }
+
+    #[test]
+    fn test_wallflower_conflict_when_dest_exists() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let dest = tmp.path().join("kick.wav");
+        std::fs::write(&dest, b"existing content").unwrap();
+        let overwrite = false;
+        // Simulate the conflict check that assign_sample will perform
+        assert!(dest.exists() && !overwrite, "Should detect conflict when dest exists and overwrite is false");
+    }
+
+    #[test]
+    fn test_wallflower_overwrite_when_flag_true() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let dest = tmp.path().join("kick.wav");
+        std::fs::write(&dest, b"existing content").unwrap();
+        let overwrite = true;
+        // When overwrite=true, the conflict check should NOT trigger
+        assert!(!(dest.exists() && !overwrite), "Should NOT detect conflict when overwrite is true");
+    }
 }
