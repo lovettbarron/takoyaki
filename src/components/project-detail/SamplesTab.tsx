@@ -135,6 +135,7 @@ function SlotSection({
                 ? { label: "Dismiss", onRedirect: onDismissError }
                 : null
             }
+            onDismiss={isErrorSlot ? onDismissError : undefined}
           />
         );
       })}
