@@ -238,4 +238,30 @@ mod tests {
             .unwrap();
         assert_eq!(count, 3, "Expected 3 tables: snapshots, snapshot_files, projects");
     }
+
+    #[test]
+    fn test_default_path_is_absolute() {
+        let path = default_path();
+        assert!(path.is_absolute(), "default_path() must return an absolute path");
+        assert!(
+            path.ends_with("takoyaki/takoyaki.db"),
+            "default_path() must end with takoyaki/takoyaki.db, got: {:?}",
+            path
+        );
+    }
+
+    #[test]
+    fn test_settings_persist_on_file_db() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let path = tmp.path().to_path_buf();
+        drop(tmp);
+        let conn = open_database(&path).unwrap();
+        set_setting(&conn, "wallflower_db_path", "/some/path.db").unwrap();
+        let value = get_setting(&conn, "wallflower_db_path").unwrap();
+        assert_eq!(
+            value,
+            Some("/some/path.db".to_string()),
+            "set_setting/get_setting must round-trip on a file-backed DB"
+        );
+    }
 }

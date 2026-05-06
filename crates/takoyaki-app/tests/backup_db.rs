@@ -259,3 +259,10 @@ fn test_get_backup_files() {
     assert!(kick.is_some(), "AUDIO/kick.wav must be in file records");
     assert_eq!(kick.unwrap().size_bytes, 4096);
 }
+
+#[test]
+fn test_mark_backup_complete_unknown_id_returns_err() {
+    let conn = setup_backup_db();
+    let result = mark_backup_complete(&conn, "nonexistent-id", true);
+    assert!(result.is_err(), "mark_backup_complete with unknown ID must return Err");
+}
