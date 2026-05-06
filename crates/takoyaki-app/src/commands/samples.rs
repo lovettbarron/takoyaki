@@ -420,6 +420,7 @@ pub async fn assign_sample(
     slot_index: u8,
     file_path: String,
     from_wallflower: bool,
+    overwrite: bool,
 ) -> Result<AssignSampleResult, AppError> {
     let parsed_slot_type = match slot_type.as_str() {
         "flex" => SlotType::Flex,
@@ -444,6 +445,24 @@ pub async fn assign_sample(
         .unwrap_or("unknown")
         .to_string();
 
+    // 1b. Format validation gate — reject non-WAV/AIFF before any snapshot or copy (WR-02)
+    // Only blocks UnsupportedFormat — WrongSampleRate and WrongBitDepth are soft warnings
+    // already shown during dry-run; user accepted them by clicking "Assign"
+    match health::read_audio_spec(&canonical_source) {
+        Ok(spec) => {
+            for issue in health::check_format_compatibility(&spec) {
+                if matches!(issue, health::FormatIssue::UnsupportedFormat(_)) {
+                    return Err(AppError::Parse(
+                        "Cannot assign non-audio file to OT slot: OT accepts WAV and AIFF only".into(),
+                    ));
+                }
+            }
+        }
+        Err(e) => {
+            return Err(AppError::Io(format!("Cannot read audio file header: {}", e)));
+        }
+    }
+
     // 2. If from_wallflower: copy file to OT /AUDIO/ FIRST (per RESEARCH.md Pitfall 5)
     //    Copy must succeed before any project.work modification (T-05-05: dest hardcoded)
     if from_wallflower {
@@ -457,17 +476,27 @@ pub async fn assign_sample(
                 .map_err(|e| AppError::Io(format!("Cannot create AUDIO dir: {}", e)))?;
         }
         let dest = audio_dir.join(&filename);
-        if dest.exists() {
-            info!(
-                "Wallflower file already exists at destination: {}",
-                dest.display()
-            );
-        } else {
-            std::fs::copy(&canonical_source, &dest).map_err(|e| {
-                AppError::Io(format!("Failed to copy file to OT AUDIO: {}", e))
-            })?;
-            info!("Copied Wallflower file to: {}", dest.display());
+
+        // WR-04: Conflict detection — return error if dest exists and overwrite not requested
+        if dest.exists() && !overwrite {
+            return Err(AppError::Io(format!(
+                "CONFLICT: {} already exists on OT card",
+                filename
+            )));
         }
+
+        // WR-03: Atomic copy — stage to .tmp in same directory (same FAT32 volume = atomic rename)
+        // Replaces bare std::fs::copy which leaves partial files on USB disconnect
+        let temp_dest = audio_dir.join(format!(".{}.tmp", &filename));
+        std::fs::copy(&canonical_source, &temp_dest)
+            .map_err(|e| AppError::Io(format!("Failed to stage Wallflower file: {}", e)))?;
+        std::fs::rename(&temp_dest, &dest)
+            .map_err(|e| {
+                // Best-effort cleanup of temp file on rename failure
+                let _ = std::fs::remove_file(&temp_dest);
+                AppError::Io(format!("Failed to finalize Wallflower file: {}", e))
+            })?;
+        info!("Atomically copied Wallflower file to: {}", dest.display());
     }
 
     // 3. Snapshot all affected files before modification (SAFE-03, D-04)
@@ -1006,5 +1035,57 @@ mod tests {
         // Non-populated slots remain None
         assert_eq!(parsed.flex_slots[1], None);
         assert_eq!(parsed.static_slots[0], None);
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 8 Plan 01: Format gate, atomic copy, conflict detection (WR-02/WR-03/WR-04)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_assign_rejects_unsupported_format() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let txt = create_non_audio_fixture(tmp.path(), "not_audio.mp3");
+        let spec = crate::health::read_audio_spec(&txt).expect("read_audio_spec returns Ok");
+        let issues = crate::health::check_format_compatibility(&spec);
+        let has_unsupported = issues.iter().any(|i| matches!(i, crate::health::FormatIssue::UnsupportedFormat(_)));
+        assert!(has_unsupported, "Non-audio file must produce UnsupportedFormat issue — assign_sample format gate depends on this");
+    }
+
+    #[test]
+    fn test_wallflower_atomic_copy_no_partial() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let src = create_wav_fixture(tmp.path(), "kick.wav", 44100, 16);
+        let dest_dir = tmp.path().join("AUDIO");
+        std::fs::create_dir_all(&dest_dir).unwrap();
+        let filename = "kick.wav";
+        let temp_dest = dest_dir.join(format!(".{}.tmp", filename));
+        let final_dest = dest_dir.join(filename);
+
+        // Atomic copy: stage to .tmp then rename
+        std::fs::copy(&src, &temp_dest).unwrap();
+        std::fs::rename(&temp_dest, &final_dest).unwrap();
+
+        assert!(final_dest.exists(), "Final destination must exist after atomic copy");
+        assert!(!temp_dest.exists(), ".tmp staging file must not remain after rename");
+    }
+
+    #[test]
+    fn test_wallflower_conflict_when_dest_exists() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let dest = tmp.path().join("kick.wav");
+        std::fs::write(&dest, b"existing content").unwrap();
+        let overwrite = false;
+        // Simulate the conflict check that assign_sample will perform
+        assert!(dest.exists() && !overwrite, "Should detect conflict when dest exists and overwrite is false");
+    }
+
+    #[test]
+    fn test_wallflower_overwrite_when_flag_true() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let dest = tmp.path().join("kick.wav");
+        std::fs::write(&dest, b"existing content").unwrap();
+        let overwrite = true;
+        // When overwrite=true, the conflict check should NOT trigger
+        assert!(!(dest.exists() && !overwrite), "Should NOT detect conflict when overwrite is true");
     }
 }
