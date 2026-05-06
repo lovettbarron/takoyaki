@@ -48,23 +48,23 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Project Management
 
-- [ ] **MGMT-01**: User can duplicate/copy an OT project with automatic sample path remapping
-- [ ] **MGMT-02**: User can rename an OT project directory on disk (directory name is the authoritative project name; no binary header contains a name field)
-- [ ] **MGMT-03**: User can export a project as a self-contained zip with all referenced samples collected
+- [x] **MGMT-01**: User can duplicate/copy an OT project with automatic sample path remapping
+- [x] **MGMT-02**: User can rename an OT project directory on disk (directory name is the authoritative project name; no binary header contains a name field)
+- [x] **MGMT-03**: User can export a project as a self-contained zip with all referenced samples collected
 - [x] **MGMT-04
 **: User can search and filter projects by name, tempo, or date via indexed metadata
 
 ### Sample Management
 
-- [ ] **SMPL-01**: User can assign a desktop audio file to a specific Flex or Static sample slot with all affected binary files updated atomically
-- [ ] **SMPL-02**: User can copy banks between projects with automatic sample slot remapping and conflict resolution
-- [ ] **SMPL-03**: System validates Flex vs Static slot type correctness when assigning samples
+- [x] **SMPL-01**: User can assign a desktop audio file to a specific Flex or Static sample slot with all affected binary files updated atomically
+- [x] **SMPL-02**: User can copy banks between projects with automatic sample slot remapping and conflict resolution
+- [x] **SMPL-03**: System validates Flex vs Static slot type correctness when assigning samples
 
 ### Wallflower Integration
 
-- [ ] **INTG-01**: User can search Wallflower sample library by key, BPM, tags, and other metadata from within Takoyaki
-- [ ] **INTG-02**: User can preview sample metadata from Wallflower and push selected samples to OT slots
-- [ ] **INTG-03**: Wallflower integration degrades gracefully when Wallflower is not installed or its database is unavailable
+- [x] **INTG-01**: User can search Wallflower sample library by key, BPM, tags, and other metadata from within Takoyaki
+- [x] **INTG-02**: User can preview sample metadata from Wallflower and push selected samples to OT slots
+- [x] **INTG-03**: Wallflower integration degrades gracefully when Wallflower is not installed or its database is unavailable
 
 ### Foundation (Non-Functional)
 
@@ -129,7 +129,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAFE-02 | Phase 3 | Pending |
 | SAFE-03 | Phase 1 | Pending |
 | SAFE-04 | Phase 1 | Pending |
-| SAFE-05 | Phase 3 | Pending |
+| SAFE-05 | Phase 3, Phase 6 (integration fix) | Pending |
 | SAFE-06 | Phase 3 | Pending |
 | SAFE-07 | Phase 3 | Pending |
 | MGMT-01 | Phase 4 | Pending |
@@ -141,7 +141,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SMPL-03 | Phase 5 | Pending |
 | INTG-01 | Phase 5 | Pending |
 | INTG-02 | Phase 5 | Pending |
-| INTG-03 | Phase 5 | Pending |
+| INTG-03 | Phase 5, Phase 6 (integration fix) | Pending |
 | FNDN-01 | Phase 1 | Pending |
 | FNDN-02 | Phase 1 | Pending |
 | FNDN-03 | Phase 1 | Pending |
@@ -153,9 +153,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 33 total
-- Mapped to phases: 33
+- Mapped to phases: 33 (all satisfied per v1.0 audit)
 - Unmapped: 0
+- Gap closure phases: 6, 7, 8 (integration fixes and tech debt from v1.0 audit)
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-29 after roadmap creation*
+*Last updated: 2026-05-06 after gap closure phase creation*

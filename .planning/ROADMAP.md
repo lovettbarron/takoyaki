@@ -116,10 +116,48 @@ Plans:
 - [x] 05-04-PLAN.md — Frontend Wallflower panel, push-to-slot flow, and end-to-end verification
 **UI hint**: yes
 
+### Phase 6: Database Persistence & Safety Fix
+**Goal**: Fix the in-memory database issue so backup history and Wallflower settings persist across app restarts, and add the missing row-count guard to mark_backup_complete.
+**Depends on**: Phase 5
+**Requirements**: SAFE-05 (integration fix), INTG-03 (integration fix)
+**Gap Closure:** Closes integration gaps SAFE-05, INTG-03 and broken flow "Backup History Persistence Across Restarts" from v1.0 audit
+**Success Criteria** (what must be TRUE):
+  1. App uses `open_database(default_path())` instead of `open_in_memory()` — backup history and Wallflower settings survive app restart
+  2. `mark_backup_complete` verifies the expected row was updated (row-count check)
+**Plans:** 0 plans
+**UI hint**: no
+
+### Phase 7: Parser Integration — Replace Stub Data
+**Goal**: Wire the Phase 1 binary parser into Phase 2 read commands so project detail, sample slots, and health checks return real parsed data instead of stubs.
+**Depends on**: Phase 6
+**Requirements**: BROW-03, BROW-04, BROW-05, DETC-01, DETC-02, DETC-03 (quality improvement)
+**Gap Closure:** Closes Phase 2 tech debt items from v1.0 audit (stub data, empty health check, unpopulated slot picker)
+**Success Criteria** (what must be TRUE):
+  1. `get_project_samples` returns real slot assignments parsed from OT binary files, not 128 empty stubs
+  2. `get_project_detail` returns real tempo, bank names, and machine types from parsed binary data
+  3. Health check scans actual slot inputs and detects real missing/incompatible samples
+  4. `is_bank_populated` derives from actual bank file parsing, not a stub integer
+  5. SlotPickerDialog shows real occupied/empty slot state
+**Plans:** 0 plans
+**UI hint**: no
+
+### Phase 8: Phase 5 Quality & Safety Fixes
+**Goal**: Fix the remaining Phase 5 tech debt — non-functional dismiss button, missing format validation, non-atomic file copy, and silent skip on existing files.
+**Depends on**: Phase 7
+**Requirements**: SMPL-01, SMPL-03, INTG-01, INTG-02 (quality improvement)
+**Gap Closure:** Closes Phase 5 tech debt items WR-01 through WR-04 from v1.0 audit
+**Success Criteria** (what must be TRUE):
+  1. SlotRow Dismiss button clears the pending assignment (not a no-op)
+  2. `assign_sample` independently validates audio format before writing (WAV/AIFF, 44.1kHz, correct bit depth)
+  3. Wallflower file copy uses atomic write (stage + rename), not `std::fs::copy`
+  4. When Wallflower destination file already exists, the user sees a conflict prompt instead of a silent skip
+**Plans:** 0 plans
+**UI hint**: no
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -128,3 +166,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 3. Write Path and Backup | 4/4 | Complete | - |
 | 4. Advanced Management | 7/7 | Complete | - |
 | 5. Sample Assignment and Wallflower | 0/4 | Planning complete | - |
+| 6. Database Persistence & Safety Fix | 0/0 | Not started | - |
+| 7. Parser Integration — Replace Stub Data | 0/0 | Not started | - |
+| 8. Phase 5 Quality & Safety Fixes | 0/0 | Not started | - |
