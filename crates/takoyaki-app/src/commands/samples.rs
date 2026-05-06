@@ -737,6 +737,43 @@ pub async fn stop_sample(
 }
 
 // ---------------------------------------------------------------------------
+// Real project.work text parser (Phase 7 — replaces parse_sample_slots)
+// ---------------------------------------------------------------------------
+
+/// Parsed output from an OT project.work text file.
+///
+/// Contains tempo from [SETTINGS] and slot assignments from [SLOTS].
+/// Bank names, part names, and machine types are NOT in project.work
+/// (they are in the bank file opaque body -- out of scope for Phase 7).
+#[derive(Debug, Clone)]
+pub(crate) struct ParsedProjectWork {
+    /// Raw tempo integer from TEMPO: key (divide by TEMPO_SCALE_FACTOR for BPM)
+    pub tempo_raw: Option<u32>,
+    /// 128 Flex slot paths (0-indexed). None = empty/unoccupied.
+    pub flex_slots: Vec<Option<String>>,
+    /// 128 Static slot paths (0-indexed). None = empty/unoccupied.
+    pub static_slots: Vec<Option<String>>,
+}
+
+/// Parse an OT project.work file from raw bytes.
+///
+/// The format is section-based text: `[SECTION]` headers followed by
+/// `KEY:VALUE` lines. This parser extracts:
+/// - `TEMPO:` from `[SETTINGS]`
+/// - `FLEX0:`..`FLEX127:` and `STAT0:`..`STAT127:` from `[SLOTS]`
+///
+/// Infallible: returns defaults on any parse error, never panics.
+/// Bounds-checked: slot indices >= 128 are silently ignored (security).
+pub(crate) fn parse_project_work(_raw: &[u8]) -> ParsedProjectWork {
+    // Stub -- tests will fail (RED phase)
+    ParsedProjectWork {
+        tempo_raw: None,
+        flex_slots: vec![None; 128],
+        static_slots: vec![None; 128],
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -938,5 +975,71 @@ mod tests {
             size_mb_large / (1024 * 1024) > 200,
             "201MB should trigger Flex hard block"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 7: parse_project_work tests (TDD RED phase)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_parse_project_work_occupied_flex_slot() {
+        let raw = b"[SLOTS]\nFLEX1:../AUDIO/kick.wav\n";
+        let parsed = parse_project_work(raw);
+        assert_eq!(parsed.flex_slots[1], Some("../AUDIO/kick.wav".to_string()));
+    }
+
+    #[test]
+    fn test_parse_project_work_occupied_static_slot() {
+        let raw = b"[SLOTS]\nSTAT0:../AUDIO/pad.wav\n";
+        let parsed = parse_project_work(raw);
+        assert_eq!(parsed.static_slots[0], Some("../AUDIO/pad.wav".to_string()));
+    }
+
+    #[test]
+    fn test_parse_project_work_empty_slot() {
+        let raw = b"[SLOTS]\nFLEX0:\n";
+        let parsed = parse_project_work(raw);
+        assert_eq!(parsed.flex_slots[0], None);
+    }
+
+    #[test]
+    fn test_parse_project_work_tempo() {
+        let raw = b"[SETTINGS]\nTEMPO:1200\n[SLOTS]\n";
+        let parsed = parse_project_work(raw);
+        assert_eq!(parsed.tempo_raw, Some(1200));
+    }
+
+    #[test]
+    fn test_parse_project_work_no_tempo() {
+        let raw = b"[SLOTS]\nFLEX0:\n";
+        let parsed = parse_project_work(raw);
+        assert_eq!(parsed.tempo_raw, None);
+    }
+
+    #[test]
+    fn test_parse_project_work_bounds_check() {
+        let raw = b"[SLOTS]\nFLEX999:../AUDIO/bad.wav\n";
+        let parsed = parse_project_work(raw);
+        assert!(parsed.flex_slots.iter().all(|s| s.is_none()));
+    }
+
+    #[test]
+    fn test_parse_project_work_empty_input() {
+        let parsed = parse_project_work(b"");
+        assert_eq!(parsed.tempo_raw, None);
+        assert!(parsed.flex_slots.iter().all(|s| s.is_none()));
+        assert!(parsed.static_slots.iter().all(|s| s.is_none()));
+    }
+
+    #[test]
+    fn test_parse_project_work_multiple_sections() {
+        let raw = b"[META]\nVERSION:1.40B\n[SETTINGS]\nTEMPO:1200\nQUANTIZE:3\n[SLOTS]\nFLEX0:../AUDIO/kick.wav\nSTAT5:../AUDIO/pad.wav\n";
+        let parsed = parse_project_work(raw);
+        assert_eq!(parsed.tempo_raw, Some(1200));
+        assert_eq!(parsed.flex_slots[0], Some("../AUDIO/kick.wav".to_string()));
+        assert_eq!(parsed.static_slots[5], Some("../AUDIO/pad.wav".to_string()));
+        // Non-populated slots remain None
+        assert_eq!(parsed.flex_slots[1], None);
+        assert_eq!(parsed.static_slots[0], None);
     }
 }
