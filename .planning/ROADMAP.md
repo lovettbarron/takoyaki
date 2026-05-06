@@ -143,7 +143,7 @@ Plans:
 **Plans:** 2 plans
 Plans:
 - [x] 07-01-PLAN.md — TDD: parse_project_work() real format parser with unit tests and fixture updates
-- [ ] 07-02-PLAN.md — Wire parser into Tauri commands, suppress DETC-03 flood, un-ignore integration tests
+- [x] 07-02-PLAN.md — Wire parser into Tauri commands, suppress DETC-03 flood, un-ignore integration tests
 **UI hint**: no
 
 ### Phase 8: Phase 5 Quality & Safety Fixes
@@ -174,5 +174,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 4. Advanced Management | 7/7 | Complete | - |
 | 5. Sample Assignment and Wallflower | 4/4 | Complete | - |
 | 6. Database Persistence & Safety Fix | 1/1 | Complete | - |
-| 7. Parser Integration — Replace Stub Data | 1/2 | In progress | - |
+| 7. Parser Integration — Replace Stub Data | 2/2 | Complete | 2026-05-06 |
 | 8. Phase 5 Quality & Safety Fixes | 0/0 | Not started | - |
