@@ -28,6 +28,8 @@ interface SlotRowProps {
   assignError?: string | null;
   /** One-click redirect for slot-type mismatch errors (D-13) */
   assignErrorRedirect?: { label: string; onRedirect: () => void } | null;
+  /** Called when the Dismiss button is clicked to clear the slot error */
+  onDismiss?: () => void;
 }
 
 function getSlotHealth(
@@ -102,7 +104,7 @@ function StatusIcon({
   return null;
 }
 
-export function SlotRow({ slot, slotType, crossRefs, healthIssues, onAssign, onPlay, playbackState, isPlaying, assignError, assignErrorRedirect }: SlotRowProps) {
+export function SlotRow({ slot, slotType, crossRefs, healthIssues, onAssign, onPlay, playbackState, isPlaying, assignError, assignErrorRedirect, onDismiss }: SlotRowProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const slotNumber = String(slot.slot_index + 1).padStart(3, "0");
@@ -251,7 +253,7 @@ export function SlotRow({ slot, slotType, crossRefs, healthIssues, onAssign, onP
             className="font-mono text-xs text-muted-foreground whitespace-nowrap shrink-0"
             onClick={(e) => {
               e.stopPropagation();
-              // Parent clears via clearSlotError — this button is visual-only; parent must wire dismiss
+              onDismiss?.();
             }}
           >
             Dismiss

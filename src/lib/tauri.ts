@@ -181,8 +181,9 @@ export async function assignSample(
   slotIndex: number,
   filePath: string,
   fromWallflower: boolean,
+  overwrite?: boolean,
 ): Promise<AssignSampleResult> {
-  return invoke("assign_sample", { projectId, slotType, slotIndex, filePath, fromWallflower });
+  return invoke("assign_sample", { projectId, slotType, slotIndex, filePath, fromWallflower, overwrite: overwrite ?? false });
 }
 
 // ── Phase 5: Wallflower IPC ─────────────────────────────────────────────
