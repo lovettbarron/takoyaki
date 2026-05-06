@@ -388,17 +388,19 @@ Step 2.5: Not applicable — this is a code-quality fix phase, not a rename/refa
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **WR-04 conflict UI: modal vs confirm dialog**
    - What we know: Phase 5 already uses `DryRunModal` for the pre-assign confirmation flow. A conflict prompt needs to appear after `handleApplyAssign` catches the conflict error.
    - What's unclear: Should the conflict prompt be a new minimal modal component, or can we reuse `window.confirm` (synchronous, no React state needed)?
    - Recommendation: Use a simple React state flag (`conflictPending: boolean`) in `SamplesTab` local state + an inline confirmation UI or a small dialog. Avoid `window.confirm` (blocks event loop, inconsistent styling). A minimal inline confirmation block (similar to `AssignSuccessBanner` structure) is sufficient — it does not need to be a full modal.
+   - RESOLVED: Use `conflictPending` local state + inline ConflictPrompt component (not `window.confirm`). Implemented in Plan 08-02 Task 2.
 
 2. **WR-04 TypeScript type update for assignSample**
    - What we know: `tauri.ts` exports `assignSample(...)`. Adding `overwrite: boolean` to the Rust signature requires updating the TS wrapper and possibly `types.ts` if a new result type is introduced.
    - What's unclear: Should `overwrite` be a positional param or named (passed as `invoke` object key)?
    - Recommendation: Named param in the `invoke` object (consistent with existing pattern where all params are passed as an object). Tauri automatically maps object keys to Rust function param names.
+   - RESOLVED: Named param in the invoke object: `overwrite?: boolean`, defaulting to `false` via `overwrite ?? false`. Implemented in Plan 08-02 Task 1 Edit 3.
 
 ---
 
