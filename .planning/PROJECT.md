@@ -79,7 +79,7 @@ An Octatrack user can manage their projects and samples with complete confidence
 
 This document evolves at phase transitions and milestone boundaries.
 
-Last updated: 2026-05-06 (Phase 7 complete — parser integration, all read commands now return real parsed data instead of stubs)
+Last updated: 2026-05-06 (Phase 8 complete — quality & safety fixes: format validation gate, atomic Wallflower copy, conflict prompt, dismiss button fix)
 
 **After each phase transition** (via `/gsd-transition`):
 1. Requirements invalidated? → Move to Out of Scope with reason
@@ -95,4 +95,4 @@ Last updated: 2026-05-06 (Phase 7 complete — parser integration, all read comm
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-06 after Phase 7 completion*
+*Last updated: 2026-05-06 after Phase 8 completion*
