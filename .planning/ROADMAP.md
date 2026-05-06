@@ -158,8 +158,8 @@ Plans:
   4. When Wallflower destination file already exists, the user sees a conflict prompt instead of a silent skip
 **Plans:** 2 plans
 Plans:
-- [ ] 08-01-PLAN.md — Rust backend: format gate, atomic Wallflower copy, and overwrite/conflict param (TDD)
-- [ ] 08-02-PLAN.md — Frontend: Dismiss button wiring, assignSample overwrite param, and conflict prompt UI
+- [x] 08-01-PLAN.md — Rust backend: format gate, atomic Wallflower copy, and overwrite/conflict param (TDD)
+- [x] 08-02-PLAN.md — Frontend: Dismiss button wiring, assignSample overwrite param, and conflict prompt UI
 **UI hint**: no
 
 ## Progress
