@@ -130,7 +130,7 @@ pub fn run() {
     });
 
     let app_state = AppState {
-        db: Mutex::new(db::Database::open_in_memory().expect("Failed to open database")),
+        db: Mutex::new(db::Database::open(&db::default_path()).expect("Failed to open database")),
         device: Mutex::new(DeviceState {
             mount_point: None,
             confirmed: false,

@@ -105,15 +105,21 @@ pub fn insert_backup(conn: &mut Connection, record: &BackupInsert) -> rusqlite::
 }
 
 /// Mark a backup as complete and set checksum_ok status.
+///
+/// Returns `Err(rusqlite::Error::QueryReturnedNoRows)` when `backup_id` does not exist,
+/// ensuring callers detect logic errors where a nonexistent backup is marked complete.
 pub fn mark_backup_complete(
     conn: &Connection,
     backup_id: &str,
     checksum_ok: bool,
 ) -> rusqlite::Result<()> {
-    conn.execute(
+    let rows_changed = conn.execute(
         "UPDATE backups SET status = 'complete', checksum_ok = ?2 WHERE id = ?1",
         params![backup_id, checksum_ok as i64],
     )?;
+    if rows_changed == 0 {
+        return Err(rusqlite::Error::QueryReturnedNoRows);
+    }
     Ok(())
 }
 
