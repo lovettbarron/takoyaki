@@ -126,7 +126,7 @@ Plans:
   2. `mark_backup_complete` verifies the expected row was updated (row-count check)
 **Plans:** 1 plan
 Plans:
-- [ ] 06-01-PLAN.md — Persistent DB initialization and mark_backup_complete row-count guard (TDD)
+- [x] 06-01-PLAN.md — Persistent DB initialization and mark_backup_complete row-count guard (TDD)
 **UI hint**: no
 
 ### Phase 7: Parser Integration — Replace Stub Data
