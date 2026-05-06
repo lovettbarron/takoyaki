@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-29)
 
 **Core value:** An Octatrack user can manage their projects and samples with complete confidence that their creative work is never at risk — every destructive operation is snapshot-protected, previewed, and atomically applied.
-**Current focus:** Phase --phase — 06
+**Current focus:** Phase 08 — Phase 5 Quality & Safety Fixes
 
 ## Current Position
 
-Phase: 07
-Plan: 02 complete (phase complete)
-Status: Phase 07 complete
+Phase: 08
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-05-06
 
 Progress: [██████████] 100%
