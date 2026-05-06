@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleCheck, X } from "lucide-react";
+import { CircleCheck, CircleAlert, X } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Toggle } from "@/components/ui/toggle";
 import { getProjectSamples, getProjectDetail, computeSampleDryRun, assignSample, getWallflowerStatus } from "@/lib/tauri";
@@ -161,11 +161,39 @@ function AssignSuccessBanner({ message, onDismiss }: { message: string; onDismis
   );
 }
 
+/** Inline conflict prompt when Wallflower destination file already exists on OT card */
+function ConflictPrompt({ filename, onOverwrite, onCancel }: { filename: string; onOverwrite: () => void; onCancel: () => void }) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 bg-[hsl(38,30%,12%)] border-b border-[hsl(38,40%,28%)]">
+      <CircleAlert className="w-4 h-4 text-[hsl(38,85%,55%)] shrink-0" />
+      <span className="text-sm text-[hsl(38,85%,75%)] flex-1">
+        <span className="font-mono">{filename}</span> already exists on the OT card. Overwrite it?
+      </span>
+      <button
+        type="button"
+        className="px-3 py-1 text-xs font-mono rounded bg-[hsl(38,50%,20%)] text-[hsl(38,85%,75%)] hover:bg-[hsl(38,50%,25%)] transition-colors"
+        onClick={onCancel}
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        className="px-3 py-1 text-xs font-mono rounded bg-[hsl(38,70%,35%)] text-[hsl(38,10%,10%)] hover:bg-[hsl(38,70%,45%)] transition-colors"
+        onClick={onOverwrite}
+      >
+        Overwrite
+      </button>
+    </div>
+  );
+}
+
 export function SamplesTab({ projectId }: SamplesTabProps) {
   const [showEmpty, setShowEmpty] = useState(false);
   const [dryRunOpen, setDryRunOpen] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [pendingApplyLabel, setPendingApplyLabel] = useState<string>("Assign Sample");
+  const [conflictPending, setConflictPending] = useState(false);
+  const [conflictFilename, setConflictFilename] = useState<string>("");
 
   const queryClient = useQueryClient();
   const deviceConnected = useDeviceStore((s) => s.connected);
@@ -317,11 +345,12 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
   }
 
   // ── Apply handler (DryRunModal "Assign Sample" / "Replace Sample" button) ──
-  async function handleApplyAssign() {
+  async function handleApplyAssign(overwrite?: boolean) {
     if (!pendingSlotType || pendingSlotIndex === null || !pendingFilePath) return;
 
     setIsApplying(true);
     setAssignStatus("assigning");
+    setConflictPending(false);
 
     try {
       const result = await assignSample(
@@ -330,6 +359,7 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
         pendingSlotIndex,
         pendingFilePath,
         pendingFromWallflower, // true for Wallflower push (copies file to /AUDIO/), false for desktop
+        overwrite ?? false,
       );
 
       setDryRunOpen(false);
@@ -348,6 +378,18 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
       // Auto-dismiss success after 4 seconds
       setTimeout(() => reset(), 4000);
     } catch (err) {
+      const errMsg = String(err);
+
+      // WR-04: Detect CONFLICT error from backend — show conflict prompt instead of generic error
+      if (errMsg.includes("CONFLICT:")) {
+        setIsApplying(false);
+        // Extract filename from "CONFLICT: kick.wav already exists on OT card"
+        const match = errMsg.match(/CONFLICT:\s*(.+?)\s+already exists/);
+        setConflictFilename(match ? match[1] : "file");
+        setConflictPending(true);
+        return;
+      }
+
       setIsApplying(false);
       setDryRunOpen(false);
       setAssignStatus("failed");
@@ -355,7 +397,7 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
         setSlotError(
           pendingSlotIndex,
           pendingSlotType,
-          `Assignment failed: ${String(err)}`,
+          `Assignment failed: ${errMsg}`,
         );
       }
     }
@@ -410,6 +452,21 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
     reset();
   }
 
+  // ── WR-04: Conflict resolution handlers ──
+  function handleConflictOverwrite() {
+    setConflictPending(false);
+    setConflictFilename("");
+    handleApplyAssign(true); // Re-call with overwrite=true
+  }
+
+  function handleConflictCancel() {
+    setConflictPending(false);
+    setConflictFilename("");
+    setIsApplying(false);
+    setDryRunOpen(false);
+    reset();
+  }
+
   // ── Redirect handler for D-13 slot type mismatch ──
   function handleSlotRedirect() {
     if (!slotErrorRedirect) return;
@@ -436,6 +493,15 @@ export function SamplesTab({ projectId }: SamplesTabProps) {
 
   return (
     <div className="flex flex-col">
+      {/* WR-04: Conflict prompt when Wallflower destination file already exists on OT card */}
+      {conflictPending && (
+        <ConflictPrompt
+          filename={conflictFilename}
+          onOverwrite={handleConflictOverwrite}
+          onCancel={handleConflictCancel}
+        />
+      )}
+
       {/* D-05: Success banner — auto-dismissing after 4 seconds */}
       {successMessage && (
         <AssignSuccessBanner
